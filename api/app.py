@@ -8,6 +8,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 
 from extensions import db, login_manager, migrate
 from models import User
+from routes.auth import auth_bp
 from routes.health import health_bp
 
 
@@ -23,6 +24,7 @@ def create_app():
     migrate.init_app(app, db)
 
     app.register_blueprint(health_bp)
+    app.register_blueprint(auth_bp)
 
     @login_manager.user_loader
     def load_user(user_id):
