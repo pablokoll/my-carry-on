@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import bcrypt
 from flask_login import UserMixin
@@ -6,7 +6,20 @@ from flask_login import UserMixin
 from extensions import db
 
 
-class User(UserMixin, db.Model):
+class BaseModel(db.Model):
+    __abstract__ = True
+
+    def to_dict(self):
+        result = {}
+        for c in self.__table__.columns:
+            val = getattr(self, c.name)
+            if isinstance(val, (datetime, date)):
+                val = val.isoformat()
+            result[c.name] = val
+        return result
+
+
+class User(UserMixin, BaseModel):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -29,7 +42,7 @@ class User(UserMixin, db.Model):
         )
 
 
-class Trip(db.Model):
+class Trip(BaseModel):
     __tablename__ = "trips"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -44,7 +57,7 @@ class Trip(db.Model):
     trip_bags = db.relationship("TripBag", back_populates="trip", lazy=True)
 
 
-class Destination(db.Model):
+class Destination(BaseModel):
     __tablename__ = "destinations"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -57,7 +70,7 @@ class Destination(db.Model):
     trip = db.relationship("Trip", back_populates="destinations")
 
 
-class Bag(db.Model):
+class Bag(BaseModel):
     __tablename__ = "bags"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -70,7 +83,7 @@ class Bag(db.Model):
     trip_bags = db.relationship("TripBag", back_populates="bag", lazy=True)
 
 
-class TripBag(db.Model):
+class TripBag(BaseModel):
     __tablename__ = "trip_bags"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -81,7 +94,7 @@ class TripBag(db.Model):
     bag = db.relationship("Bag", back_populates="trip_bags")
 
 
-class Category(db.Model):
+class Category(BaseModel):
     __tablename__ = "categories"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -93,7 +106,7 @@ class Category(db.Model):
     items = db.relationship("Item", back_populates="category", lazy=True)
 
 
-class Item(db.Model):
+class Item(BaseModel):
     __tablename__ = "items"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -108,7 +121,7 @@ class Item(db.Model):
     sub_items = db.relationship("SubItem", back_populates="item", lazy=True)
 
 
-class SubItem(db.Model):
+class SubItem(BaseModel):
     __tablename__ = "sub_items"
 
     id = db.Column(db.Integer, primary_key=True)
