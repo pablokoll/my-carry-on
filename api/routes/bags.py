@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from errors import BadRequest, Conflict, NotFound
 from extensions import db, get_current_user_id
-from models import Bag, TripBag
+from models import Bag, Trip, TripBag
 
 bags_bp = Blueprint("bags", __name__)
 
@@ -73,6 +73,23 @@ def delete_bag(bag_id):
     db.session.delete(bag)
     db.session.commit()
     return jsonify({"message": "Bag deleted"}), 200
+
+
+@bags_bp.route("/trips/<int:trip_id>/bags", methods=["GET"])
+@jwt_required()
+def get_trip_bags(trip_id):
+    user_id = get_current_user_id()
+    trip = Trip.query.get(trip_id)
+    if not trip or trip.user_id != user_id:
+        raise NotFound("Trip not found")
+
+    result = []
+    for tb in trip.trip_bags:
+        bag = tb.bag
+        d = bag.to_dict()
+        d["items"] = [item.to_dict() for item in bag.items]
+        result.append(d)
+    return jsonify(result), 200
 
 
 @bags_bp.route("/trips/<int:trip_id>/bags", methods=["POST"])

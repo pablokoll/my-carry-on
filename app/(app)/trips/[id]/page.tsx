@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api, clearTokens } from '@/lib/api'
 import { FormModal, Field } from '@/components/ui/form-modal'
+import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
+import { BagItemsTable, type Item, type Category } from '@/components/bag-items-table'
 
 interface Trip {
   id: number
@@ -21,11 +23,6 @@ interface Destination {
   departure_date: string | null
 }
 
-interface Bag {
-  id: number
-  name: string
-  type: string
-}
 
 const btnPrimary: React.CSSProperties = {
   background: 'var(--primary)',
@@ -113,9 +110,14 @@ export default function TripPage() {
   const [allBags, setAllBags] = useState<Bag[]>([])
   const [assignedBags, setAssignedBags] = useState<Bag[]>([])
   const [bagOpen, setBagOpen] = useState(false)
+  const [createBagOpen, setCreateBagOpen] = useState(false)
   const [selectedBagId, setSelectedBagId] = useState('')
   const [bagSubmitting, setBagSubmitting] = useState(false)
   const [bagErr, setBagErr] = useState('')
+  // bag items & categories for inline table
+  const [bagItems, setBagItems] = useState<Record<number, Item[]>>({})
+  const [categories, setCategories] = useState<Category[]>([])
+  const [expandedBags, setExpandedBags] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     api.get<Trip>(`/trips/${id}`)
@@ -133,6 +135,16 @@ export default function TripPage() {
       setAllBags(bags)
       if (bags.length > 0) setSelectedBagId(String(bags[0].id))
     })
+
+    api.get<Category[]>('/categories').then(setCategories)
+
+    api.get<(Bag & { items: Item[] })[]>(`/trips/${id}/bags`)
+      .then(bags => {
+        setAssignedBags(bags.map(b => ({ id: b.id, name: b.name, type: b.type })))
+        const itemsMap: Record<number, Item[]> = {}
+        bags.forEach(b => { itemsMap[b.id] = b.items ?? [] })
+        setBagItems(itemsMap)
+      })
   }, [id, router])
 
   // --- edit trip ---
@@ -241,7 +253,10 @@ export default function TripPage() {
     try {
       await api.post(`/trips/${id}/bags`, { bag_id: Number(selectedBagId) })
       const bag = allBags.find(b => b.id === Number(selectedBagId))
-      if (bag) setAssignedBags(prev => [...prev, bag])
+      if (bag) {
+        setAssignedBags(prev => [...prev, bag])
+        setBagItems(prev => ({ ...prev, [bag.id]: prev[bag.id] ?? [] }))
+      }
       closeBagModal()
     } catch (e) {
       setBagErr(e instanceof Error ? e.message : 'Failed to assign bag')
@@ -254,6 +269,15 @@ export default function TripPage() {
     try {
       await api.delete(`/trips/${id}/bags/${bagId}`)
       setAssignedBags(prev => prev.filter(b => b.id !== bagId))
+    } catch { /* silent */ }
+  }
+
+  async function handleBagCreated(bag: Bag) {
+    setAllBags(prev => [...prev, bag])
+    try {
+      await api.post(`/trips/${id}/bags`, { bag_id: bag.id })
+      setAssignedBags(prev => [...prev, bag])
+      setBagItems(prev => ({ ...prev, [bag.id]: [] }))
     } catch { /* silent */ }
   }
 
@@ -318,7 +342,10 @@ export default function TripPage() {
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <h3 style={sectionHeader}>Bags</h3>
-          {unassignedBags.length > 0 && <button style={btnPrimary} onClick={openBagModal}>Assign bag</button>}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {unassignedBags.length > 0 && <button style={{ ...btnPrimary, background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)' }} onClick={openBagModal}>Assign bag</button>}
+            <button style={btnPrimary} onClick={() => setCreateBagOpen(true)}>New bag</button>
+          </div>
         </div>
         {assignedBags.length === 0 ? (
           <p style={{ color: 'var(--fg-muted)', fontSize: '14px' }}>
@@ -326,16 +353,46 @@ export default function TripPage() {
             {allBags.length === 0 && ' Create bags first from the Bags page.'}
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {assignedBags.map(bag => (
-              <div key={bag.id} style={rowStyle}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--foreground)' }}>{bag.name}</span>
-                  <TypeBadge type={bag.type} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {assignedBags.map(bag => {
+              const expanded = expandedBags.has(bag.id)
+              return (
+                <div key={bag.id} style={{ background: 'var(--bg-surface)', borderRadius: '10px', overflow: 'hidden' }}>
+                  {/* Bag header row */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+                    <button
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, flex: 1, textAlign: 'left' }}
+                      onClick={() => setExpandedBags(prev => {
+                        const next = new Set(prev)
+                        next.has(bag.id) ? next.delete(bag.id) : next.add(bag.id)
+                        return next
+                      })}
+                    >
+                      <span style={{ fontSize: '13px', color: 'var(--fg-muted)', lineHeight: 1, transition: 'transform 120ms', display: 'inline-block', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--foreground)' }}>{bag.name}</span>
+                      <TypeBadge type={bag.type} />
+                      {bagItems[bag.id] && (
+                        <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>
+                          {bagItems[bag.id].filter(i => i.packed).length}/{bagItems[bag.id].length} packed
+                        </span>
+                      )}
+                    </button>
+                    <button style={btnDestructive} onClick={() => handleUnassignBag(bag.id)}>Remove</button>
+                  </div>
+                  {/* Expanded items table */}
+                  {expanded && (
+                    <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px' }}>
+                      <BagItemsTable
+                        bagId={bag.id}
+                        initialItems={bagItems[bag.id] ?? []}
+                        categories={categories}
+                        onItemsChange={items => setBagItems(prev => ({ ...prev, [bag.id]: items }))}
+                      />
+                    </div>
+                  )}
                 </div>
-                <button style={btnDestructive} onClick={() => handleUnassignBag(bag.id)}>Remove</button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -386,6 +443,12 @@ export default function TripPage() {
           </Field>
         </div>
       </FormModal>
+
+      <CreateBagModal
+        open={createBagOpen}
+        onClose={() => setCreateBagOpen(false)}
+        onCreated={handleBagCreated}
+      />
 
       {/* Assign bag modal */}
       <FormModal
