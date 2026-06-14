@@ -342,36 +342,32 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   return (
     <div>
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {serverItems.length > 0 && !editMode && (
-            <>
-              <span style={{ fontSize: '13px', color: 'var(--fg-muted)' }}>{packed}/{serverItems.length} packed</span>
-              <select
-                value={filterCatId === 'all' ? 'all' : String(filterCatId)}
-                onChange={e => setFilterCatId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                style={{ ...catSelect, width: 'auto', minWidth: '120px', height: '30px', fontSize: '12px' }}
-              >
-                <option value="all">All categories</option>
-                {categories.filter(c => serverItems.some(i => i.category_id === c.id)).map(c => (
-                  <option key={c.id} value={String(c.id)}>{c.name}</option>
-                ))}
-              </select>
-              <button
-                style={{ ...btnSecondary, fontSize: '12px', height: '30px', padding: '0 10px' }}
-                onClick={() => setGroupMode(g => g === 'category' ? 'none' : 'category')}
-              >
-                {groupMode === 'category' ? 'Ungroup' : 'Group by category'}
-              </button>
-            </>
-          )}
-        </div>
-        {!editMode && (
-          <button style={{ ...btnPrimary, height: '30px', padding: '0 14px', fontSize: '13px' }} onClick={enterEdit}>
-            Edit items
+      {serverItems.length > 0 && !editMode && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>{packed}/{serverItems.length} packed</span>
+            <select
+              value={filterCatId === 'all' ? 'all' : String(filterCatId)}
+              onChange={e => setFilterCatId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              style={{ ...catSelect, width: 'auto', minWidth: '100px', height: '26px', fontSize: '11px', padding: '0 6px' }}
+            >
+              <option value="all">All</option>
+              {categories.filter(c => serverItems.some(i => i.category_id === c.id)).map(c => (
+                <option key={c.id} value={String(c.id)}>{c.name}</option>
+              ))}
+            </select>
+            <button
+              style={{ ...btnSecondary, fontSize: '11px', height: '26px', padding: '0 8px' }}
+              onClick={() => setGroupMode(g => g === 'category' ? 'none' : 'category')}
+            >
+              {groupMode === 'category' ? 'Ungroup' : 'Group'}
+            </button>
+          </div>
+          <button style={{ ...btnPrimary, height: '26px', padding: '0 10px', fontSize: '12px' }} onClick={enterEdit}>
+            Edit
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {isEmpty ? (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>

@@ -118,6 +118,8 @@ export default function TripPage() {
   const [bagItems, setBagItems] = useState<Record<number, Item[]>>({})
   const [categories, setCategories] = useState<Category[]>([])
   const [expandedBags, setExpandedBags] = useState<Set<number>>(new Set())
+  // kebab menu
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     api.get<Trip>(`/trips/${id}`)
@@ -306,31 +308,42 @@ export default function TripPage() {
       {/* Trip header */}
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-            <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--foreground)', margin: 0 }}>{trip.name}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--foreground)', margin: 0 }}>{trip.name}</h2>
             {trip.is_active && (
-              <span style={{ fontSize: '11px', fontWeight: 500, padding: '3px 10px', borderRadius: '99px', background: 'rgba(74,123,181,0.1)', color: 'var(--primary)' }}>Active</span>
+              <span style={{ fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '99px', background: 'rgba(74,123,181,0.1)', color: 'var(--primary)' }}>Active</span>
             )}
           </div>
           {(trip.start_date || trip.end_date) && (
-            <p style={{ fontSize: '13px', color: 'var(--fg-muted)', margin: 0 }}>
+            <p style={{ fontSize: '12px', color: 'var(--fg-muted)', margin: 0 }}>
               {trip.start_date ?? '—'} → {trip.end_date ?? '—'}
             </p>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        {/* Kebab menu */}
+        <div style={{ position: 'relative' }}>
           <button
-            onClick={handleToggleActive}
-            style={{ background: 'transparent', border: `1px solid ${trip.is_active ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '8px', padding: '6px 14px', fontSize: '13px', color: trip.is_active ? 'var(--primary)' : 'var(--fg-secondary)', cursor: 'pointer' }}
+            onClick={() => setMenuOpen(o => !o)}
+            style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 10px', fontSize: '18px', color: 'var(--fg-secondary)', cursor: 'pointer', lineHeight: 1 }}
           >
-            {trip.is_active ? 'Deactivate' : 'Set active'}
+            ⋯
           </button>
-          <button onClick={openEdit} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', color: 'var(--fg-secondary)', cursor: 'pointer' }}>
-            Edit
-          </button>
-          <button onClick={handleDeleteTrip} style={{ background: 'transparent', border: 'none', padding: '6px 8px', fontSize: '13px', color: 'var(--destructive)', cursor: 'pointer' }}>
-            Delete
-          </button>
+          {menuOpen && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setMenuOpen(false)} />
+              <div style={{ position: 'absolute', right: 0, top: '36px', zIndex: 20, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', boxShadow: 'var(--shadow-md)', minWidth: '140px', overflow: 'hidden' }}>
+                <button onClick={() => { handleToggleActive(); setMenuOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}>
+                  {trip.is_active ? 'Deactivate' : 'Active'}
+                </button>
+                <button onClick={() => { openEdit(); setMenuOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--foreground)', borderTop: '1px solid var(--border)' }}>
+                  Edit
+                </button>
+                <button onClick={() => { setMenuOpen(false); handleDeleteTrip() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--destructive)', borderTop: '1px solid var(--border)' }}>
+                  Delete
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -338,7 +351,7 @@ export default function TripPage() {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <h3 style={sectionHeader}>Destinations</h3>
-          <button style={btnPrimary} onClick={() => setDestOpen(true)}>Add destination</button>
+          <button style={{ ...btnPrimary, fontSize: '13px', padding: '5px 12px', height: 'auto' }} onClick={() => setDestOpen(true)}>+ Add</button>
         </div>
         {destLoading ? (
           <p style={{ color: 'var(--fg-muted)', fontSize: '14px' }}>Loading…</p>
@@ -356,9 +369,9 @@ export default function TripPage() {
                     </p>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  <button style={{ ...btnDestructive, color: 'var(--fg-secondary)' }} onClick={() => openEditDest(dest)}>Edit</button>
-                  <button style={btnDestructive} onClick={() => handleDeleteDestination(dest.id)}>Remove</button>
+                <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                  <button onClick={() => openEditDest(dest)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '13px', padding: '4px 8px' }}>✎</button>
+                  <button onClick={() => handleDeleteDestination(dest.id)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '16px', lineHeight: 1, padding: '4px 6px' }}>×</button>
                 </div>
               </div>
             ))}
@@ -370,9 +383,13 @@ export default function TripPage() {
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <h3 style={sectionHeader}>Bags</h3>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {unassignedBags.length > 0 && <button style={{ ...btnPrimary, background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)' }} onClick={openBagModal}>Assign bag</button>}
-            <button style={btnPrimary} onClick={() => setCreateBagOpen(true)}>New bag</button>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {unassignedBags.length > 0 && (
+              <button style={{ ...btnPrimary, background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', fontSize: '13px', padding: '5px 12px', height: 'auto' }} onClick={openBagModal}>
+                Assign
+              </button>
+            )}
+            <button style={{ ...btnPrimary, fontSize: '13px', padding: '5px 12px', height: 'auto' }} onClick={() => setCreateBagOpen(true)}>+ New bag</button>
           </div>
         </div>
         {assignedBags.length === 0 ? (
@@ -405,7 +422,11 @@ export default function TripPage() {
                         </span>
                       )}
                     </button>
-                    <button style={btnDestructive} onClick={() => handleUnassignBag(bag.id)}>Remove</button>
+                    <button
+                      onClick={() => handleUnassignBag(bag.id)}
+                      title="Remove bag"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '16px', lineHeight: 1, padding: '4px 6px', flexShrink: 0 }}
+                    >×</button>
                   </div>
                   {/* Expanded items table */}
                   {expanded && (
