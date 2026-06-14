@@ -1,16 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FormModal, Field } from '@/components/ui/form-modal'
-
-interface Bag {
-  id: number
-  name: string
-  type: 'carry-on' | 'checked' | 'backpack' | 'other'
-}
-
-const BAG_TYPES = ['carry-on', 'checked', 'backpack', 'other'] as const
+import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
 
 const btnPrimary: React.CSSProperties = {
   background: 'var(--primary)',
@@ -48,14 +41,10 @@ function TypeBadge({ type }: { type: string }) {
 }
 
 export default function BagsPage() {
+  const router = useRouter()
   const [bags, setBags] = useState<Bag[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [type, setType] = useState<typeof BAG_TYPES[number]>('carry-on')
-  const [nameError, setNameError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     api.get<Bag[]>('/bags')
@@ -63,37 +52,12 @@ export default function BagsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  function handleClose() {
-    setModalOpen(false)
-    setName('')
-    setType('carry-on')
-    setNameError('')
-    setFormError('')
-  }
-
-  async function handleCreate() {
-    if (!name.trim()) { setNameError('Name is required'); return }
-    setNameError('')
-    setFormError('')
-    setSubmitting(true)
-    try {
-      const bag = await api.post<Bag>('/bags', { name: name.trim(), type })
-      setBags(prev => [bag, ...prev])
-      handleClose()
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Failed to create bag')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   async function handleDelete(id: number) {
+    if (!confirm('Delete this bag? This cannot be undone.')) return
     try {
       await api.delete(`/bags/${id}`)
       setBags(prev => prev.filter(b => b.id !== id))
-    } catch {
-      // silent
-    }
+    } catch { /* silent */ }
   }
 
   if (loading) {
@@ -109,8 +73,8 @@ export default function BagsPage() {
 
       {bags.length === 0 ? (
         <div style={{ textAlign: 'center', paddingTop: '64px' }}>
-          <p style={{ color: 'var(--fg-muted)', fontSize: '15px', marginBottom: '20px' }}>No bags yet. Create your first bag.</p>
-          <button style={btnPrimary} onClick={() => setModalOpen(true)}>New bag</button>
+          <p style={{ color: 'var(--fg-muted)', fontSize: '15px', marginBottom: '20px' }}>No bags yet.</p>
+          <button style={btnPrimary} onClick={() => setModalOpen(true)}>Prepare your first bag</button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -122,42 +86,25 @@ export default function BagsPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-            }}>
+              cursor: 'pointer',
+            }}
+              onClick={() => router.push(`/bags/${bag.id}`)}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--foreground)' }}>{bag.name}</span>
                 <TypeBadge type={bag.type} />
               </div>
-              <button style={btnDestructive} onClick={() => handleDelete(bag.id)}>Delete</button>
+              <button style={btnDestructive} onClick={e => { e.stopPropagation(); handleDelete(bag.id) }}>Delete</button>
             </div>
           ))}
         </div>
       )}
 
-      <FormModal
+      <CreateBagModal
         open={modalOpen}
-        onClose={handleClose}
-        title="New bag"
-        onSubmit={handleCreate}
-        submitting={submitting}
-        submitLabel="Create bag"
-        error={formError}
-      >
-        <Field label="Name" error={nameError}>
-          <input
-            type="text"
-            placeholder="e.g. Main carry-on"
-            autoFocus
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
-          />
-        </Field>
-        <Field label="Type">
-          <select value={type} onChange={e => setType(e.target.value as typeof BAG_TYPES[number])} style={{ cursor: 'pointer' }}>
-            {BAG_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </Field>
-      </FormModal>
+        onClose={() => setModalOpen(false)}
+        onCreated={bag => setBags(prev => [bag, ...prev])}
+      />
     </>
   )
 }

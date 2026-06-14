@@ -248,6 +248,7 @@ export default function TripPage() {
   }
 
   async function handleDeleteDestination(destId: number) {
+    if (!confirm('Remove this destination?')) return
     try {
       await api.delete(`/destinations/${destId}`)
       setDestinations(prev => prev.filter(d => d.id !== destId))
@@ -285,6 +286,7 @@ export default function TripPage() {
   }
 
   async function handleUnassignBag(bagId: number) {
+    if (!confirm('Remove this bag from the trip?')) return
     try {
       await api.delete(`/trips/${id}/bags/${bagId}`)
       setAssignedBags(prev => prev.filter(b => b.id !== bagId))
