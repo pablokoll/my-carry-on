@@ -1,29 +1,30 @@
 from flask import Blueprint, jsonify, request
-from flask_login import current_user, login_required
-
+from flask_jwt_extended import jwt_required
 from errors import BadRequest, NotFound
-from extensions import db
+from extensions import db, get_current_user_id
 from models import Trip
 
 trips_bp = Blueprint("trips", __name__)
 
 
 @trips_bp.route("/trips", methods=["GET"])
-@login_required
+@jwt_required()
 def get_trips():
-    trips = Trip.query.filter_by(user_id=current_user.id).all()
+    user_id = get_current_user_id()
+    trips = Trip.query.filter_by(user_id=user_id).all()
     return jsonify([trip.to_dict() for trip in trips]), 200
 
 
 @trips_bp.route("/trips", methods=["POST"])
-@login_required
+@jwt_required()
 def create_trip():
+    user_id = get_current_user_id()
     data = request.get_json()
     if not data or not data.get("name"):
         raise BadRequest("name is required")
 
     trip = Trip(
-        user_id=current_user.id,
+        user_id=user_id,
         name=data["name"],
         start_date=data.get("start_date"),
         end_date=data.get("end_date"),
@@ -34,14 +35,15 @@ def create_trip():
 
 
 @trips_bp.route("/trips/<int:trip_id>", methods=["PUT"])
-@login_required
+@jwt_required()
 def update_trip(trip_id):
+    user_id = get_current_user_id()
     data = request.get_json()
     if not data:
         raise BadRequest("No data provided")
 
     trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != current_user.id:
+    if not trip or trip.user_id != user_id:
         raise NotFound("Trip not found")
 
     trip.name = data.get("name") or trip.name
@@ -52,10 +54,11 @@ def update_trip(trip_id):
 
 
 @trips_bp.route("/trips/<int:trip_id>", methods=["DELETE"])
-@login_required
+@jwt_required()
 def delete_trip(trip_id):
+    user_id = get_current_user_id()
     trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != current_user.id:
+    if not trip or trip.user_id != user_id:
         raise NotFound("Trip not found")
 
     db.session.delete(trip)
@@ -64,13 +67,14 @@ def delete_trip(trip_id):
 
 
 @trips_bp.route("/trips/<int:trip_id>/activate", methods=["POST"])
-@login_required
+@jwt_required()
 def activate_trip(trip_id):
+    user_id = get_current_user_id()
     trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != current_user.id:
+    if not trip or trip.user_id != user_id:
         raise NotFound("Trip not found")
 
-    for t in Trip.query.filter_by(user_id=current_user.id, is_active=True):
+    for t in Trip.query.filter_by(user_id=user_id, is_active=True):
         t.is_active = False
 
     trip.is_active = True
