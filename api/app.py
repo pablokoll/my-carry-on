@@ -42,4 +42,9 @@ def create_app():
     app.register_blueprint(destinations_bp)
     app.register_blueprint(items_bp)
 
+    @app.cli.command("seed")
+    def seed():
+        from seed import seed_categories
+        seed_categories()
+
     return app
