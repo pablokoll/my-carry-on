@@ -91,16 +91,12 @@ export function Nav() {
         borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
         padding: '0 16px',
         boxShadow: 'var(--shadow-xs)',
       }}>
-        <Link href="/" style={{ fontSize: '17px', fontWeight: 700, color: 'var(--foreground)', textDecoration: 'none' }}>
-          My Carry-On
-        </Link>
-
         {/* Desktop nav */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '4px' }} className="desktop-nav">
+        <nav style={{ alignItems: 'center', gap: '4px' }} className="desktop-nav">
           {NAV_LINKS.map(({ href, label }) => (
             <DesktopNavLink key={href} href={href} label={label} />
           ))}
@@ -118,7 +114,6 @@ export function Nav() {
             cursor: 'pointer',
             padding: '8px',
             color: 'var(--foreground)',
-            display: 'flex',
             flexDirection: 'column',
             gap: '5px',
           }}
@@ -134,21 +129,21 @@ export function Nav() {
         <>
           <div
             onClick={() => setMenuOpen(false)}
-            style={{ position: 'fixed', inset: 0, zIndex: 41, background: 'rgba(28,35,51,0.3)', backdropFilter: 'blur(2px)' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 41, background: 'rgba(28,35,51,0.4)', backdropFilter: 'blur(2px)' }}
           />
           <div style={{
             position: 'fixed',
-            top: '56px',
-            left: 0,
+            top: 0,
             right: 0,
+            width: '80%',
+            bottom: 0,
             zIndex: 42,
             background: 'var(--card)',
-            borderBottom: '1px solid var(--border)',
-            padding: '12px 12px 16px',
-            boxShadow: 'var(--shadow-md)',
+            padding: `68px 12px 16px`,
             display: 'flex',
             flexDirection: 'column',
             gap: '2px',
+            boxShadow: 'var(--shadow-md)',
           }}>
             <NavLinks onClick={() => setMenuOpen(false)} />
           </div>
@@ -156,11 +151,11 @@ export function Nav() {
       )}
 
       <style>{`
-        .desktop-nav { display: none; }
-        .burger-btn { display: flex; }
+        .desktop-nav { display: none !important; }
+        .burger-btn { display: flex !important; }
         @media (min-width: 640px) {
-          .desktop-nav { display: flex; }
-          .burger-btn { display: none; }
+          .desktop-nav { display: flex !important; }
+          .burger-btn { display: none !important; }
         }
       `}</style>
     </>

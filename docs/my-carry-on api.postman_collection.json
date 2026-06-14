@@ -1,0 +1,851 @@
+{
+  "info": {
+    "_postman_id": "778c433f-a1c2-4287-ac10-25a70a61e6cc",
+    "name": "My Carry-On API",
+    "description": "API for My Carry-On — trip packing app",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "33962883"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trips",
+      "item": [
+        {
+          "name": "Get Trips",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Viaje a Roma\",\n  \"start_date\": \"2026-07-01\",\n  \"end_date\": \"2026-07-10\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/trips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Trip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Viaje a Paris\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/trips/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Trip",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trips/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Trip",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trips/1/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "1",
+                "activate"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bags",
+      "item": [
+        {
+          "name": "Get Bags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bags",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bags"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Bag",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Mochila\", \"type\": \"backpack\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/bags",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bags"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Bag",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bags/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bags",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Bag",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Mochila Grande\", \"type\": \"backpack\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/bags/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bags",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Bag",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bags/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bags",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Bag to Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"bag_id\": 1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/trips/1/bags",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "1",
+                "bags"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unassign Bag from Trip",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trips/1/bags/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "1",
+                "bags",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Ropa\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Ropa de Abrigo\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/categories/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "item": [
+        {
+          "name": "Get Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bags/1/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bags",
+                "1",
+                "items"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Remera\", \"category_id\": 1, \"quantity\": 3}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/bags/1/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bags",
+                "1",
+                "items"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Remera\", \"quantity\": 5, \"packed\": true}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/items/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "items",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/items/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "items",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SubItems",
+      "item": [
+        {
+          "name": "Get SubItems",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/items/1/sub-items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "items",
+                "1",
+                "sub-items"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create SubItem",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Remera blanca\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/items/1/sub-items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "items",
+                "1",
+                "sub-items"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update SubItem",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Remera blanca\", \"packed\": true}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/sub-items/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sub-items",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete SubItem",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/sub-items/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sub-items",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Destinations",
+      "item": [
+        {
+          "name": "Get Destinations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trips/1/destinations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "1",
+                "destinations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Destination",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"city\": \"Paris\", \"country\": \"Francia\", \"arrival_date\": \"2026-07-01\", \"departure_date\": \"2026-07-05\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/trips/1/destinations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "1",
+                "destinations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Destination",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"city\": \"Lyon\", \"country\": \"Francia\", \"arrival_date\": \"2026-07-05\", \"departure_date\": \"2026-07-08\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/destinations/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "destinations",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Destination",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/destinations/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "destinations",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001/api"
+    }
+  ]
+}
