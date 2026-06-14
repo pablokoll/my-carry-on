@@ -90,3 +90,16 @@ def activate_trip(trip_id):
     trip.is_active = True
     db.session.commit()
     return jsonify(trip.to_dict()), 200
+
+
+@trips_bp.route("/trips/<int:trip_id>/deactivate", methods=["POST"])
+@jwt_required()
+def deactivate_trip(trip_id):
+    user_id = get_current_user_id()
+    trip = Trip.query.get(trip_id)
+    if not trip or trip.user_id != user_id:
+        raise NotFound("Trip not found")
+
+    trip.is_active = False
+    db.session.commit()
+    return jsonify(trip.to_dict()), 200

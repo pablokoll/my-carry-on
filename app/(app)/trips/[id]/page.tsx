@@ -160,6 +160,23 @@ export default function TripPage() {
 
   function closeEdit() { setEditOpen(false); setEditNameErr(''); setEditErr('') }
 
+  async function handleDeleteTrip() {
+    if (!confirm('Delete this trip? This cannot be undone.')) return
+    try {
+      await api.delete(`/trips/${id}`)
+      router.replace('/')
+    } catch { /* silent */ }
+  }
+
+  async function handleToggleActive() {
+    if (!trip) return
+    try {
+      const endpoint = trip.is_active ? `/trips/${id}/deactivate` : `/trips/${id}/activate`
+      const updated = await api.post<Trip>(endpoint, {})
+      setTrip(updated)
+    } catch { /* silent */ }
+  }
+
   async function handleEditTrip() {
     if (!editName.trim()) { setEditNameErr('Name is required'); return }
     setEditNameErr(''); setEditErr(''); setEditSubmitting(true)
@@ -301,9 +318,20 @@ export default function TripPage() {
             </p>
           )}
         </div>
-        <button onClick={openEdit} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', color: 'var(--fg-secondary)', cursor: 'pointer' }}>
-          Edit
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={handleToggleActive}
+            style={{ background: 'transparent', border: `1px solid ${trip.is_active ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '8px', padding: '6px 14px', fontSize: '13px', color: trip.is_active ? 'var(--primary)' : 'var(--fg-secondary)', cursor: 'pointer' }}
+          >
+            {trip.is_active ? 'Deactivate' : 'Set active'}
+          </button>
+          <button onClick={openEdit} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', color: 'var(--fg-secondary)', cursor: 'pointer' }}>
+            Edit
+          </button>
+          <button onClick={handleDeleteTrip} style={{ background: 'transparent', border: 'none', padding: '6px 8px', fontSize: '13px', color: 'var(--destructive)', cursor: 'pointer' }}>
+            Delete
+          </button>
+        </div>
       </div>
 
       {/* Destinations */}

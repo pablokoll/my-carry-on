@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useRouter as useNav } from 'next/navigation'
 import Link from 'next/link'
 import { api, clearTokens } from '@/lib/api'
 import { CreateTripModal } from '@/components/create-trip-modal'
