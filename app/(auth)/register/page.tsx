@@ -7,10 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api, setTokens } from '@/lib/api'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { AuthShell, inputStyle, labelStyle, errorStyle, submitBtnStyle, footerLinkStyle } from '../auth-layout'
 
 const schema = z.object({
   email: z.string().email('Invalid email'),
@@ -47,77 +44,60 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-foreground">My Carry-On</h1>
-          <p className="text-muted-foreground text-sm mt-1">Pack smarter, travel lighter.</p>
+    <AuthShell
+      title="Create an account"
+      description="Start planning your trips"
+      footer={<>Already have an account?{' '}<Link href="/login" style={footerLinkStyle}>Sign in</Link></>}
+    >
+      <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div>
+          <label style={labelStyle}>Email</label>
+          <input
+            type="email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            {...register('email')}
+            style={inputStyle(!!errors.email)}
+            onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')}
+            onBlur={e => (e.target.style.boxShadow = 'none')}
+          />
+          {errors.email && <p style={errorStyle}>{errors.email.message}</p>}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Create an account</CardTitle>
-            <CardDescription>Start planning your trips</CardDescription>
-          </CardHeader>
+        <div>
+          <label style={labelStyle}>Password</label>
+          <input
+            type="password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            {...register('password')}
+            style={inputStyle(!!errors.password)}
+            onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')}
+            onBlur={e => (e.target.style.boxShadow = 'none')}
+          />
+          {errors.password && <p style={errorStyle}>{errors.password.message}</p>}
+        </div>
 
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  {...register('email')}
-                />
-                {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
-              </div>
+        <div>
+          <label style={labelStyle}>Confirm password</label>
+          <input
+            type="password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            {...register('confirmPassword')}
+            style={inputStyle(!!errors.confirmPassword)}
+            onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')}
+            onBlur={e => (e.target.style.boxShadow = 'none')}
+          />
+          {errors.confirmPassword && <p style={errorStyle}>{errors.confirmPassword.message}</p>}
+        </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  {...register('password')}
-                />
-                {errors.password && <p className="text-destructive text-xs">{errors.password.message}</p>}
-              </div>
+        {error && <p style={{ fontSize: '13px', color: 'var(--destructive)', textAlign: 'center' }}>{error}</p>}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword">Confirm password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  {...register('confirmPassword')}
-                />
-                {errors.confirmPassword && <p className="text-destructive text-xs">{errors.confirmPassword.message}</p>}
-              </div>
-
-              {error && (
-                <p className="text-destructive text-sm text-center">{error}</p>
-              )}
-
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating account…' : 'Create account'}
-              </Button>
-            </form>
-          </CardContent>
-
-          <CardFooter className="justify-center">
-            <p className="text-sm text-muted-foreground">
-              Already have an account?{' '}
-              <Link href="/login" className="text-primary font-medium hover:underline">
-                Sign in
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
-      </div>
-    </div>
+        <button type="submit" disabled={isSubmitting} style={submitBtnStyle(isSubmitting)}>
+          {isSubmitting ? 'Creating account…' : 'Create account'}
+        </button>
+      </form>
+    </AuthShell>
   )
 }

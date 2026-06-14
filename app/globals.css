@@ -33,8 +33,12 @@
 }
 
 :root {
-  --background: #f0f3f8;
+  --background: #ffffff;
+  --bg-surface: #f0f3f8;
+  --bg-hover: #e6eaf2;
   --foreground: #1c2333;
+  --fg-secondary: #3d4a63;
+  --fg-muted: #8896b0;
   --card: #ffffff;
   --card-foreground: #1c2333;
   --popover: #ffffff;
@@ -53,6 +57,14 @@
   --input: #dde2ec;
   --ring: #4a7bb5;
   --radius: 0.625rem;
+  --shadow-xs: 0 1px 2px 0 rgba(28,35,51,0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(28,35,51,0.06), 0 1px 2px 0 rgba(28,35,51,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(28,35,51,0.08), 0 2px 4px -1px rgba(28,35,51,0.05);
+  --shadow-focus: 0 0 0 3px rgba(74,123,181,0.20);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-1: 120ms;
+  --duration-2: 180ms;
+  --duration-3: 240ms;
 }
 
 .dark {
