@@ -1,7 +1,6 @@
 from datetime import date, datetime, timezone
 
 import bcrypt
-from flask_login import UserMixin
 
 from extensions import db
 
@@ -19,7 +18,7 @@ class BaseModel(db.Model):
         return result
 
 
-class User(UserMixin, BaseModel):
+class User(BaseModel):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
