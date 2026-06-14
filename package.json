@@ -3,23 +3,37 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "start-dev": "pnpm migrate && pnpm seed && vercel dev",
     "dev": "next dev",
+    "migrate": "cd api && .venv/bin/flask db upgrade",
+    "seed": "cd api && .venv/bin/flask seed",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "@base-ui/react": "^1.5.0",
+    "@hookform/resolvers": "^5.4.0",
+    "@tailwindcss/postcss": "^4.3.1",
     "@types/node": "20.1.4",
     "@types/react": "18.2.6",
     "@types/react-dom": "18.2.4",
     "autoprefixer": "10.4.14",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "eslint": "8.40.0",
     "eslint-config-next": "13.4.2",
+    "lucide-react": "^1.18.0",
     "next": "^16.0.10",
     "postcss": "8.4.23",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "tailwindcss": "3.3.2",
-    "typescript": "^5"
+    "react-hook-form": "^7.79.0",
+    "shadcn": "^4.11.0",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "4.3.1",
+    "tw-animate-css": "^1.4.0",
+    "typescript": "^5",
+    "zod": "^3.25.76"
   }
 }
