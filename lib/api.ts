@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '') + '/api'
 
 function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -54,7 +54,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Request failed' }))
-    throw new Error(err.message ?? 'Request failed')
+    const e = new Error(err.message ?? 'Request failed') as Error & { status: number }
+    e.status = res.status
+    throw e
   }
 
   return res.json() as Promise<T>

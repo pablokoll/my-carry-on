@@ -34,6 +34,16 @@ def create_trip():
     return jsonify(trip.to_dict()), 201
 
 
+@trips_bp.route("/trips/<int:trip_id>", methods=["GET"])
+@jwt_required()
+def get_trip(trip_id):
+    user_id = get_current_user_id()
+    trip = Trip.query.get(trip_id)
+    if not trip or trip.user_id != user_id:
+        raise NotFound("Trip not found")
+    return jsonify(trip.to_dict()), 200
+
+
 @trips_bp.route("/trips/<int:trip_id>", methods=["PUT"])
 @jwt_required()
 def update_trip(trip_id):
