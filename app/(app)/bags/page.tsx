@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 
 const btnPrimary: React.CSSProperties = {
   background: 'var(--primary)',
@@ -45,6 +46,7 @@ export default function BagsPage() {
   const [bags, setBags] = useState<Bag[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [confirmId, setConfirmId] = useState<number | null>(null)
 
   useEffect(() => {
     api.get<Bag[]>('/bags')
@@ -52,12 +54,14 @@ export default function BagsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  async function handleDelete(id: number) {
-    if (!confirm('Delete this bag? This cannot be undone.')) return
+  async function handleDelete() {
+    if (confirmId === null) return
     try {
-      await api.delete(`/bags/${id}`)
-      setBags(prev => prev.filter(b => b.id !== id))
-    } catch { /* silent */ }
+      await api.delete(`/bags/${confirmId}`)
+      setBags(prev => prev.filter(b => b.id !== confirmId))
+    } catch { /* silent */ } finally {
+      setConfirmId(null)
+    }
   }
 
   if (loading) {
@@ -94,7 +98,7 @@ export default function BagsPage() {
                 <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--foreground)' }}>{bag.name}</span>
                 <TypeBadge type={bag.type} />
               </div>
-              <button style={btnDestructive} onClick={e => { e.stopPropagation(); handleDelete(bag.id) }}>Delete</button>
+              <button style={btnDestructive} onClick={e => { e.stopPropagation(); setConfirmId(bag.id) }}>Delete</button>
             </div>
           ))}
         </div>
@@ -104,6 +108,15 @@ export default function BagsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreated={bag => setBags(prev => [bag, ...prev])}
+      />
+
+      <ConfirmModal
+        open={confirmId !== null}
+        title="Delete bag?"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmId(null)}
       />
     </>
   )

@@ -24,7 +24,7 @@ export function Field({ label, error, children }: FieldProps) {
     },
   })
   return (
-    <div>
+    <div style={{ minWidth: 0 }}>
       <label style={labelStyle}>{label}</label>
       {child}
       {error && <p style={errorStyle}>{error}</p>}
@@ -48,7 +48,7 @@ export function FormModal({ open, onClose, title, onSubmit, submitting, submitLa
     <Dialog open={open} onClose={onClose}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <h2 style={{ fontSize: '17px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>{title}</h2>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '18px', lineHeight: 1, padding: '4px' }}>✕</button>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '18px', lineHeight: 1, padding: '4px', flexShrink: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

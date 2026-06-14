@@ -6,6 +6,7 @@ import { api, clearTokens } from '@/lib/api'
 import { FormModal, Field } from '@/components/ui/form-modal'
 import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
 import { BagItemsTable, type Item, type Category } from '@/components/bag-items-table'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 
 interface Trip {
   id: number
@@ -120,6 +121,10 @@ export default function TripPage() {
   const [expandedBags, setExpandedBags] = useState<Set<number>>(new Set())
   // kebab menu
   const [menuOpen, setMenuOpen] = useState(false)
+  // confirm modals
+  const [confirmTrip, setConfirmTrip] = useState(false)
+  const [confirmDestId, setConfirmDestId] = useState<number | null>(null)
+  const [confirmBagId, setConfirmBagId] = useState<number | null>(null)
 
   useEffect(() => {
     api.get<Trip>(`/trips/${id}`)
@@ -163,7 +168,6 @@ export default function TripPage() {
   function closeEdit() { setEditOpen(false); setEditNameErr(''); setEditErr('') }
 
   async function handleDeleteTrip() {
-    if (!confirm('Delete this trip? This cannot be undone.')) return
     try {
       await api.delete(`/trips/${id}`)
       router.replace('/')
@@ -247,12 +251,14 @@ export default function TripPage() {
     }
   }
 
-  async function handleDeleteDestination(destId: number) {
-    if (!confirm('Remove this destination?')) return
+  async function handleDeleteDestination() {
+    if (confirmDestId === null) return
     try {
-      await api.delete(`/destinations/${destId}`)
-      setDestinations(prev => prev.filter(d => d.id !== destId))
-    } catch { /* silent */ }
+      await api.delete(`/destinations/${confirmDestId}`)
+      setDestinations(prev => prev.filter(d => d.id !== confirmDestId))
+    } catch { /* silent */ } finally {
+      setConfirmDestId(null)
+    }
   }
 
   // --- bags ---
@@ -285,12 +291,14 @@ export default function TripPage() {
     }
   }
 
-  async function handleUnassignBag(bagId: number) {
-    if (!confirm('Remove this bag from the trip?')) return
+  async function handleUnassignBag() {
+    if (confirmBagId === null) return
     try {
-      await api.delete(`/trips/${id}/bags/${bagId}`)
-      setAssignedBags(prev => prev.filter(b => b.id !== bagId))
-    } catch { /* silent */ }
+      await api.delete(`/trips/${id}/bags/${confirmBagId}`)
+      setAssignedBags(prev => prev.filter(b => b.id !== confirmBagId))
+    } catch { /* silent */ } finally {
+      setConfirmBagId(null)
+    }
   }
 
   async function handleBagCreated(bag: Bag) {
@@ -340,7 +348,7 @@ export default function TripPage() {
                 <button onClick={() => { openEdit(); setMenuOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--foreground)', borderTop: '1px solid var(--border)' }}>
                   Edit
                 </button>
-                <button onClick={() => { setMenuOpen(false); handleDeleteTrip() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--destructive)', borderTop: '1px solid var(--border)' }}>
+                <button onClick={() => { setMenuOpen(false); setConfirmTrip(true) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--destructive)', borderTop: '1px solid var(--border)' }}>
                   Delete
                 </button>
               </div>
@@ -373,7 +381,7 @@ export default function TripPage() {
                 </div>
                 <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
                   <button onClick={() => openEditDest(dest)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '13px', padding: '4px 8px' }}>✎</button>
-                  <button onClick={() => handleDeleteDestination(dest.id)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '16px', lineHeight: 1, padding: '4px 6px' }}>×</button>
+                  <button onClick={() => setConfirmDestId(dest.id)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '16px', lineHeight: 1, padding: '4px 6px' }}>×</button>
                 </div>
               </div>
             ))}
@@ -425,7 +433,7 @@ export default function TripPage() {
                       )}
                     </button>
                     <button
-                      onClick={() => handleUnassignBag(bag.id)}
+                      onClick={() => setConfirmBagId(bag.id)}
                       title="Remove bag"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '16px', lineHeight: 1, padding: '4px 6px', flexShrink: 0 }}
                     >×</button>
@@ -485,7 +493,7 @@ export default function TripPage() {
         <Field label="Country" error={destCountryErr}>
           <input type="text" placeholder="e.g. France" value={destCountry} onChange={e => setDestCountry(e.target.value)} />
         </Field>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
           <Field label="Arrival">
             <input type="date" value={destArrival} onChange={e => setDestArrival(e.target.value)} />
           </Field>
@@ -519,6 +527,29 @@ export default function TripPage() {
           </select>
         </Field>
       </FormModal>
+
+      <ConfirmModal
+        open={confirmTrip}
+        title="Delete trip?"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteTrip}
+        onCancel={() => setConfirmTrip(false)}
+      />
+      <ConfirmModal
+        open={confirmDestId !== null}
+        title="Remove destination?"
+        confirmLabel="Remove"
+        onConfirm={handleDeleteDestination}
+        onCancel={() => setConfirmDestId(null)}
+      />
+      <ConfirmModal
+        open={confirmBagId !== null}
+        title="Remove bag from trip?"
+        confirmLabel="Remove"
+        onConfirm={handleUnassignBag}
+        onCancel={() => setConfirmBagId(null)}
+      />
     </>
   )
 }
