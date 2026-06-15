@@ -54,6 +54,28 @@ def refresh():
     return jsonify({"access_token": access_token}), 200
 
 
+@auth_bp.route("/auth/me", methods=["GET"])
+@jwt_required()
+def me():
+    from extensions import get_current_user_id
+    from models import Bag, Trip
+    user_id = get_current_user_id()
+    user = User.query.get(user_id)
+
+    trips = Trip.query.filter_by(user_id=user_id).all()
+    trip_count = len(trips)
+    destination_count = sum(len(t.destinations) for t in trips)
+    bag_count = Bag.query.filter_by(user_id=user_id).count()
+
+    return jsonify({
+        "email": user.email,
+        "created_at": user.created_at.isoformat(),
+        "trip_count": trip_count,
+        "destination_count": destination_count,
+        "bag_count": bag_count,
+    }), 200
+
+
 @auth_bp.route("/auth/logout", methods=["POST"])
 @jwt_required()
 def logout():

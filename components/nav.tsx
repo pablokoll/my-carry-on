@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Dashboard' },
   { href: '/trips', label: 'Trips' },
   { href: '/bags', label: 'Bags' },
+  { href: '/profile', label: 'Profile' },
 ]
 
 function NavLinks({ onClick }: { onClick?: () => void }) {
