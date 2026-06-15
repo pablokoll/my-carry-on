@@ -97,7 +97,7 @@ def create_sub_item(item_id):
     if not data or not data.get("name"):
         raise BadRequest("name is required")
 
-    sub_item = SubItem(item_id=item_id, name=data["name"])
+    sub_item = SubItem(item_id=item_id, name=data["name"], quantity=data.get("quantity", 1))
     db.session.add(sub_item)
     db.session.commit()
     return jsonify(sub_item.to_dict()), 201
@@ -116,6 +116,7 @@ def update_sub_item(sub_item_id):
         raise NotFound("SubItem not found")
 
     sub_item.name = data.get("name") or sub_item.name
+    sub_item.quantity = data.get("quantity") or sub_item.quantity
     sub_item.packed = data.get("packed") if "packed" in data else sub_item.packed
     db.session.commit()
     return jsonify(sub_item.to_dict()), 200

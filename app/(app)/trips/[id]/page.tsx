@@ -426,11 +426,18 @@ export default function TripPage() {
                       <span style={{ fontSize: '13px', color: 'var(--fg-muted)', lineHeight: 1, transition: 'transform 120ms', display: 'inline-block', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
                       <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--foreground)' }}>{bag.name}</span>
                       <TypeBadge type={bag.type} />
-                      {bagItems[bag.id] && (
-                        <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>
-                          {bagItems[bag.id].filter(i => i.packed).length}/{bagItems[bag.id].length} packed
-                        </span>
-                      )}
+                      {bagItems[bag.id] && (() => {
+                        const items = bagItems[bag.id]
+                        let total = 0, packed = 0
+                        for (const i of items) {
+                          if (i.sub_items?.length) {
+                            for (const s of i.sub_items) { total += s.quantity || 1; if (s.packed) packed += s.quantity || 1 }
+                          } else {
+                            total += i.quantity || 1; if (i.packed) packed += i.quantity || 1
+                          }
+                        }
+                        return <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>{packed}/{total} packed</span>
+                      })()}
                     </button>
                     <button
                       onClick={() => setConfirmBagId(bag.id)}

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_postman_postman__createCollectionFolder",
+      "mcp__plugin_postman_postman__createCollectionRequest"
+    ]
+  }
+}

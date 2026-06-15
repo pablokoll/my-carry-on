@@ -8,12 +8,21 @@ export interface Category {
   name: string
 }
 
+export interface SubItem {
+  id: number
+  item_id: number
+  name: string
+  quantity: number
+  packed: boolean
+}
+
 export interface Item {
   id: number
   name: string
   quantity: number
   packed: boolean
   category_id: number | null
+  sub_items: SubItem[]
 }
 
 // Stable palette — index maps to category id % COLORS.length
@@ -45,10 +54,19 @@ interface RowDraft {
   deleted?: boolean
 }
 
+interface SubDraft {
+  id: number
+  item_id: number
+  name: string
+  quantity: number
+  packed: boolean
+  deleted?: boolean
+}
+
 type SortKey = 'name' | 'category' | 'quantity'
 type GroupMode = 'none' | 'category'
 
-// ── Styles ──────────────────────────────────────────────────────────────────
+// ── Styles ───────────────────────────────────────────────────────────────────
 
 const th: React.CSSProperties = {
   padding: '8px 12px',
@@ -163,7 +181,6 @@ interface BagItemsTableProps {
   bagId: number
   initialItems: Item[]
   categories: Category[]
-  /** Callback when items change (optional, for parent state sync) */
   onItemsChange?: (items: Item[]) => void
 }
 
@@ -171,7 +188,9 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   const [serverItems, setServerItems] = useState<Item[]>(initialItems)
   const [editMode, setEditMode] = useState(false)
   const [drafts, setDrafts] = useState<RowDraft[]>([])
+  const [subDrafts, setSubDrafts] = useState<Record<number, SubDraft[]>>({})
   const [nameErrors, setNameErrors] = useState<Set<number>>(new Set())
+  const [subNameErrors, setSubNameErrors] = useState<Set<number>>(new Set())
   const [saving, setSaving] = useState(false)
   const [saveErr, setSaveErr] = useState('')
 
@@ -180,6 +199,9 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   const [groupMode, setGroupMode] = useState<GroupMode>('category')
   const [filterCatId, setFilterCatId] = useState<number | 'all'>('all')
 
+  // expanded item ids (view mode and edit mode)
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set())
+
   const firstInputRef = useRef<HTMLInputElement>(null)
 
   function syncItems(next: Item[]) {
@@ -187,11 +209,25 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
     onItemsChange?.(next)
   }
 
-  // ── Edit mode ─────────────────────────────────────────────────────────────
+  function toggleExpand(itemId: number) {
+    setExpandedItems(prev => {
+      const s = new Set(prev)
+      s.has(itemId) ? s.delete(itemId) : s.add(itemId)
+      return s
+    })
+  }
+
+  // ── Edit mode ──────────────────────────────────────────────────────────────
 
   function enterEdit() {
     setDrafts(serverItems.map(i => ({ ...i })))
+    const subs: Record<number, SubDraft[]> = {}
+    serverItems.forEach(i => {
+      subs[i.id] = i.sub_items.map(s => ({ ...s }))
+    })
+    setSubDrafts(subs)
     setNameErrors(new Set())
+    setSubNameErrors(new Set())
     setSaveErr('')
     setEditMode(true)
     setTimeout(() => firstInputRef.current?.focus(), 50)
@@ -200,7 +236,9 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   function cancelEdit() {
     setEditMode(false)
     setDrafts([])
+    setSubDrafts({})
     setNameErrors(new Set())
+    setSubNameErrors(new Set())
     setSaveErr('')
   }
 
@@ -220,6 +258,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
       packed: false,
       category_id: categories[0]?.id ?? null,
     }])
+    setSubDrafts(prev => ({ ...prev, [tid]: [] }))
     setTimeout(() => {
       const inputs = document.querySelectorAll<HTMLInputElement>('[data-row-name]')
       inputs[inputs.length - 1]?.focus()
@@ -235,17 +274,66 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
     setNameErrors(prev => { const s = new Set(prev); s.delete(id); return s })
   }
 
+  // Sub-item draft helpers
+  function getSubDraftsForItem(itemId: number): SubDraft[] {
+    return subDrafts[itemId] ?? []
+  }
+
+  function addSubRow(itemId: number) {
+    const tid = nextTempId()
+    const newSub: SubDraft = { id: tid, item_id: itemId, name: '', quantity: 1, packed: false }
+    setSubDrafts(prev => ({ ...prev, [itemId]: [...(prev[itemId] ?? []), newSub] }))
+    setExpandedItems(prev => { const s = new Set(prev); s.add(itemId); return s })
+    setTimeout(() => {
+      const inputs = document.querySelectorAll<HTMLInputElement>(`[data-sub-name="${itemId}"]`)
+      ;(inputs[inputs.length - 1] as HTMLInputElement)?.focus()
+    }, 30)
+  }
+
+  function updateSubDraft(itemId: number, subId: number, patch: Partial<SubDraft>) {
+    setSubDrafts(prev => ({
+      ...prev,
+      [itemId]: (prev[itemId] ?? []).map(s => s.id === subId ? { ...s, ...patch } : s),
+    }))
+    if (patch.name !== undefined && subNameErrors.has(subId)) {
+      setSubNameErrors(prev => { const s = new Set(prev); s.delete(subId); return s })
+    }
+  }
+
+  function removeSubRow(itemId: number, subId: number) {
+    if (subId > 0) {
+      setSubDrafts(prev => ({
+        ...prev,
+        [itemId]: (prev[itemId] ?? []).map(s => s.id === subId ? { ...s, deleted: true } : s),
+      }))
+    } else {
+      setSubDrafts(prev => ({
+        ...prev,
+        [itemId]: (prev[itemId] ?? []).filter(s => s.id !== subId),
+      }))
+    }
+    setSubNameErrors(prev => { const s = new Set(prev); s.delete(subId); return s })
+  }
+
   async function handleSave() {
     const errors = new Set<number>()
     drafts.forEach(d => { if (!d.deleted && !d.name.trim()) errors.add(d.id) })
-    if (errors.size > 0) { setNameErrors(errors); return }
+
+    const subErrors = new Set<number>()
+    Object.values(subDrafts).flat().forEach(s => { if (!s.deleted && !s.name.trim()) subErrors.add(s.id) })
+
+    if (errors.size > 0 || subErrors.size > 0) {
+      setNameErrors(errors)
+      setSubNameErrors(subErrors)
+      return
+    }
 
     setSaving(true); setSaveErr('')
     try {
       const toCreate = drafts.filter(d => d.id < 0 && !d.deleted)
       const toUpdate = drafts.filter(d => d.id > 0 && !d.deleted).filter(d => {
         const orig = serverItems.find(i => i.id === d.id)
-        return orig && (orig.name !== d.name || orig.quantity !== d.quantity || orig.category_id !== d.category_id)
+        return orig && (orig.name !== d.name || orig.category_id !== d.category_id)
       })
       const toDelete = drafts.filter(d => d.id > 0 && d.deleted)
 
@@ -260,19 +348,45 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
         Promise.all(toUpdate.map(d =>
           api.put<Item>(`/items/${d.id}`, {
             name: d.name.trim(),
-            quantity: d.quantity,
             category_id: d.category_id,
           })
         )),
         Promise.all(toDelete.map(d => api.delete(`/items/${d.id}`))),
       ])
 
-      let next = serverItems.filter(i => !toDelete.find(d => d.id === i.id))
-      next = next.map(i => updated.find(u => u.id === i.id) ?? i)
-      next = [...next, ...created]
-      syncItems(next)
+      // Map temp ids to real ids for sub-item creation
+      const tempToReal = new Map<number, number>()
+      toCreate.forEach((d, idx) => tempToReal.set(d.id, created[idx].id))
+
+      // Persist sub-item drafts
+      const subOps: Promise<unknown>[] = []
+      for (const [rawItemId, subs] of Object.entries(subDrafts)) {
+        const draftItemId = Number(rawItemId)
+        const realItemId = draftItemId < 0 ? tempToReal.get(draftItemId) : draftItemId
+        if (!realItemId) continue
+
+        for (const s of subs) {
+          if (s.id < 0 && !s.deleted) {
+            subOps.push(api.post(`/items/${realItemId}/sub-items`, { name: s.name.trim(), quantity: s.quantity }))
+          } else if (s.id > 0 && !s.deleted) {
+            const origItem = serverItems.find(i => i.id === realItemId)
+            const origSub = origItem?.sub_items.find(os => os.id === s.id)
+            if (origSub && (origSub.name !== s.name || origSub.quantity !== s.quantity)) {
+              subOps.push(api.put(`/sub-items/${s.id}`, { name: s.name.trim(), quantity: s.quantity }))
+            }
+          } else if (s.id > 0 && s.deleted) {
+            subOps.push(api.delete(`/sub-items/${s.id}`))
+          }
+        }
+      }
+      await Promise.all(subOps)
+
+      // Reload items to get fresh sub_items counts and data
+      const freshItems = await api.get<Item[]>(`/bags/${bagId}/items`)
+      syncItems(freshItems)
       setEditMode(false)
       setDrafts([])
+      setSubDrafts({})
     } catch (e) {
       setSaveErr(e instanceof Error ? e.message : 'Failed to save')
     } finally {
@@ -283,11 +397,22 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   async function togglePacked(item: Item) {
     try {
       const updated = await api.put<Item>(`/items/${item.id}`, { packed: !item.packed })
-      syncItems(serverItems.map(i => i.id === updated.id ? updated : i))
+      syncItems(serverItems.map(i => i.id === updated.id ? { ...i, packed: updated.packed } : i))
     } catch { /* silent */ }
   }
 
-  // ── View helpers ──────────────────────────────────────────────────────────
+  async function toggleSubPacked(itemId: number, sub: SubItem) {
+    try {
+      await api.put<SubItem>(`/sub-items/${sub.id}`, { packed: !sub.packed })
+      syncItems(serverItems.map(i =>
+        i.id === itemId
+          ? { ...i, sub_items: i.sub_items.map(s => s.id === sub.id ? { ...s, packed: !s.packed } : s) }
+          : i
+      ))
+    } catch { /* silent */ }
+  }
+
+  // ── View helpers ───────────────────────────────────────────────────────────
 
   function sortList<T extends { name: string; quantity: number; category_id: number | null }>(list: T[]): T[] {
     return [...list].sort((a, b) => {
@@ -339,6 +464,193 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   const packed = serverItems.filter(i => i.packed).length
   const isEmpty = serverItems.length === 0 && !editMode
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  function renderViewItem(item: Item, catName: string | null) {
+    const color = catColor(item.category_id)
+    const expanded = expandedItems.has(item.id)
+    const hasSubs = item.sub_items.length > 0
+
+    return (
+      <React.Fragment key={item.id}>
+        <tr style={{ background: color?.bg ?? 'transparent', opacity: item.packed ? 0.55 : 1, transition: 'opacity 180ms, background 120ms' }}>
+          <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
+            {hasSubs ? (
+              <button
+                onClick={() => toggleExpand(item.id)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '10px', padding: '0 8px', lineHeight: 1, transition: 'transform 120ms', transform: expanded ? 'rotate(90deg)' : 'none' }}
+              >▶</button>
+            ) : (
+              <input
+                type="checkbox"
+                checked={item.packed}
+                onChange={() => togglePacked(item)}
+                style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+              />
+            )}
+          </td>
+          <td style={{ padding: '0', verticalAlign: 'middle' }}>
+            <div style={{ ...cellInner, textDecoration: item.packed ? 'line-through' : 'none' }}>{item.name}</div>
+          </td>
+          <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
+            <div style={{ ...cellInner, color: item.quantity > 1 ? 'var(--foreground)' : 'var(--fg-muted)' }}>
+              {item.quantity}
+            </div>
+          </td>
+          <td style={{ padding: '0', verticalAlign: 'middle' }}>
+            {color && catName ? (
+              <div style={{ ...cellInner, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color.dot, flexShrink: 0 }} />
+                <span style={{ fontSize: '13px', color: 'var(--fg-secondary)' }}>{catName}</span>
+              </div>
+            ) : (
+              <div style={{ ...cellInner, color: 'var(--fg-muted)', fontSize: '13px' }}>—</div>
+            )}
+          </td>
+        </tr>
+        {hasSubs && expanded && item.sub_items.map(sub => (
+          <tr key={`sub-${sub.id}`} style={{ background: color ? color.bg : 'transparent', opacity: sub.packed ? 0.5 : 0.85 }}>
+            <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
+              <input
+                type="checkbox"
+                checked={sub.packed}
+                onChange={() => toggleSubPacked(item.id, sub)}
+                style={{ width: '13px', height: '13px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+              />
+            </td>
+            <td style={{ padding: '0', verticalAlign: 'middle' }}>
+              <div style={{ ...cellInner, fontSize: '12px', paddingLeft: '24px', textDecoration: sub.packed ? 'line-through' : 'none', color: 'var(--fg-secondary)' }}>
+                {sub.name}
+              </div>
+            </td>
+            <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
+              <div style={{ ...cellInner, fontSize: '12px', color: sub.quantity > 1 ? 'var(--foreground)' : 'var(--fg-muted)' }}>
+                {sub.quantity}
+              </div>
+            </td>
+            <td />
+          </tr>
+        ))}
+      </React.Fragment>
+    )
+  }
+
+  function renderEditItem(draft: RowDraft, idx: number) {
+    const color = catColor(draft.category_id)
+    const expanded = expandedItems.has(draft.id)
+    const subs = getSubDraftsForItem(draft.id).filter(s => !s.deleted)
+    const hasSubs = subs.length > 0
+
+    return (
+      <React.Fragment key={draft.id}>
+        <tr style={{ background: color?.bg ?? 'transparent', transition: 'background 120ms' }}>
+          <td style={td}>
+            <button
+              style={{ ...btnGhost, color: 'var(--destructive)', padding: '0 8px', fontSize: '16px', lineHeight: 1 }}
+              onClick={() => removeRow(draft.id)}
+              title="Remove"
+            >×</button>
+          </td>
+          <td style={td}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {/* sub-item toggle in edit mode */}
+              <button
+                onClick={() => toggleExpand(draft.id)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '10px', padding: '0 4px', lineHeight: 1, transition: 'transform 120ms', transform: expanded ? 'rotate(90deg)' : 'none', flexShrink: 0 }}
+              >▶</button>
+              <input
+                ref={idx === 0 ? firstInputRef : undefined}
+                data-row-name
+                type="text"
+                value={draft.name}
+                placeholder="Item name"
+                onChange={e => updateDraft(draft.id, { name: e.target.value })}
+                onKeyDown={e => { if (e.key === 'Enter') addRow() }}
+                style={cellInput(nameErrors.has(draft.id))}
+                onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = 'var(--shadow-focus)' }}
+                onBlur={e => { e.target.style.borderColor = nameErrors.has(draft.id) ? 'var(--destructive)' : 'transparent'; e.target.style.boxShadow = 'none' }}
+              />
+            </div>
+          </td>
+          <td style={{ ...td, textAlign: 'center' }}>
+            {hasSubs ? (
+              <div style={{ ...cellInner, color: 'var(--fg-muted)', fontSize: '13px', textAlign: 'center' }}>{subs.reduce((a, s) => a + s.quantity, 0)}</div>
+            ) : (
+              <input
+                type="number"
+                min="1"
+                value={draft.quantity}
+                onChange={e => updateDraft(draft.id, { quantity: Number(e.target.value) || 1 })}
+                style={qtyInput}
+                onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = 'var(--shadow-focus)' }}
+                onBlur={e => { e.target.style.borderColor = 'transparent'; e.target.style.boxShadow = 'none' }}
+              />
+            )}
+          </td>
+          <td style={td}>
+            <select
+              value={draft.category_id !== null ? String(draft.category_id) : ''}
+              onChange={e => updateDraft(draft.id, { category_id: e.target.value ? Number(e.target.value) : null })}
+              style={{ ...catSelect, background: color ? color.bg : 'var(--bg-surface)', borderColor: color ? color.dot + '40' : 'var(--border)' }}
+            >
+              <option value="">No category</option>
+              {categories.map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+            </select>
+          </td>
+        </tr>
+        {/* Sub-item rows */}
+        {expanded && (
+          <>
+            {subs.map(sub => (
+              <tr key={`sub-${sub.id}`} style={{ background: color ? color.bg : 'transparent' }}>
+                <td style={td}>
+                  <button
+                    style={{ ...btnGhost, color: 'var(--destructive)', padding: '0 8px', fontSize: '14px', lineHeight: 1 }}
+                    onClick={() => removeSubRow(draft.id, sub.id)}
+                    title="Remove sub-item"
+                  >×</button>
+                </td>
+                <td style={{ ...td, paddingLeft: '20px' }}>
+                  <input
+                    data-sub-name={draft.id}
+                    type="text"
+                    value={sub.name}
+                    placeholder="Sub-item name"
+                    onChange={e => updateSubDraft(draft.id, sub.id, { name: e.target.value })}
+                    onKeyDown={e => { if (e.key === 'Enter') addSubRow(draft.id) }}
+                    style={{ ...cellInput(subNameErrors.has(sub.id)), fontSize: '12px', height: '30px', paddingLeft: '8px' }}
+                    onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = 'var(--shadow-focus)' }}
+                    onBlur={e => { e.target.style.borderColor = subNameErrors.has(sub.id) ? 'var(--destructive)' : 'transparent'; e.target.style.boxShadow = 'none' }}
+                  />
+                </td>
+                <td style={{ ...td, textAlign: 'center' }}>
+                  <input
+                    type="number"
+                    min="1"
+                    value={sub.quantity}
+                    onChange={e => updateSubDraft(draft.id, sub.id, { quantity: Number(e.target.value) || 1 })}
+                    style={{ ...qtyInput, height: '30px', fontSize: '12px' }}
+                    onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = 'var(--shadow-focus)' }}
+                    onBlur={e => { e.target.style.borderColor = 'transparent'; e.target.style.boxShadow = 'none' }}
+                  />
+                </td>
+                <td />
+              </tr>
+            ))}
+            <tr style={{ background: color ? color.bg : 'transparent' }}>
+              <td />
+              <td colSpan={3} style={{ paddingLeft: '20px', paddingBottom: '4px' }}>
+                <button style={{ ...btnLink, fontSize: '12px', paddingLeft: '8px' }} onClick={() => addSubRow(draft.id)}>
+                  + Add sub-item
+                </button>
+              </td>
+            </tr>
+          </>
+        )}
+      </React.Fragment>
+    )
+  }
+
   return (
     <div>
       {/* Toolbar */}
@@ -378,8 +690,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              {editMode && <col style={{ width: '36px' }} />}
-              {!editMode && <col style={{ width: '36px' }} />}
+              <col style={{ width: '36px' }} />
               <col />
               <col style={{ width: '52px' }} />
               <col style={{ width: editMode ? '130px' : '110px' }} />
@@ -400,55 +711,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
             </thead>
             <tbody>
               {editMode ? (
-                visibleDrafts.map((draft, idx) => {
-                  const color = catColor(draft.category_id)
-                  return (
-                    <tr key={draft.id} style={{ background: color?.bg ?? 'transparent', transition: 'background 120ms' }}>
-                      <td style={td}>
-                        <button
-                          style={{ ...btnGhost, color: 'var(--destructive)', padding: '0 8px', fontSize: '16px', lineHeight: 1 }}
-                          onClick={() => removeRow(draft.id)}
-                          title="Remove"
-                        >×</button>
-                      </td>
-                      <td style={td}>
-                        <input
-                          ref={idx === 0 ? firstInputRef : undefined}
-                          data-row-name
-                          type="text"
-                          value={draft.name}
-                          placeholder="Item name"
-                          onChange={e => updateDraft(draft.id, { name: e.target.value })}
-                          onKeyDown={e => { if (e.key === 'Enter') addRow() }}
-                          style={cellInput(nameErrors.has(draft.id))}
-                          onFocus={e => { (e.target as HTMLInputElement).style.borderColor = 'var(--primary)'; (e.target as HTMLInputElement).style.boxShadow = 'var(--shadow-focus)' }}
-                          onBlur={e => { (e.target as HTMLInputElement).style.borderColor = nameErrors.has(draft.id) ? 'var(--destructive)' : 'transparent'; (e.target as HTMLInputElement).style.boxShadow = 'none' }}
-                        />
-                      </td>
-                      <td style={{ ...td, textAlign: 'center' }}>
-                        <input
-                          type="number"
-                          min="1"
-                          value={draft.quantity}
-                          onChange={e => updateDraft(draft.id, { quantity: Number(e.target.value) || 1 })}
-                          style={qtyInput}
-                          onFocus={e => { (e.target as HTMLInputElement).style.borderColor = 'var(--primary)'; (e.target as HTMLInputElement).style.boxShadow = 'var(--shadow-focus)' }}
-                          onBlur={e => { (e.target as HTMLInputElement).style.borderColor = 'transparent'; (e.target as HTMLInputElement).style.boxShadow = 'none' }}
-                        />
-                      </td>
-                      <td style={td}>
-                        <select
-                          value={draft.category_id !== null ? String(draft.category_id) : ''}
-                          onChange={e => updateDraft(draft.id, { category_id: e.target.value ? Number(e.target.value) : null })}
-                          style={{ ...catSelect, background: color ? color.bg : 'var(--bg-surface)', borderColor: color ? color.dot + '40' : 'var(--border)' }}
-                        >
-                          <option value="">No category</option>
-                          {categories.map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
-                        </select>
-                      </td>
-                    </tr>
-                  )
-                })
+                visibleDrafts.map((draft, idx) => renderEditItem(draft, idx))
               ) : groupMode === 'category' ? (
                 groupByCategory(visibleItems).map(group => (
                   <React.Fragment key={`g-${group.catId}`}>
@@ -468,29 +731,13 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
                         {group.label}
                       </td>
                     </tr>
-                    {group.items.map(item => (
-                      <ViewRow
-                        key={item.id}
-                        item={item}
-                        color={catColor(item.category_id)}
-                        catName={group.catId !== null ? group.label : null}
-                        onToggle={togglePacked}
-                      />
-                    ))}
+                    {group.items.map(item => renderViewItem(item, group.catId !== null ? group.label : null))}
                   </React.Fragment>
                 ))
               ) : (
                 visibleItems.map(item => {
                   const catName = categories.find(c => c.id === item.category_id)?.name ?? null
-                  return (
-                    <ViewRow
-                      key={item.id}
-                      item={item}
-                      color={catColor(item.category_id)}
-                      catName={catName}
-                      onToggle={togglePacked}
-                    />
-                  )
+                  return renderViewItem(item, catName)
                 })
               )}
             </tbody>
@@ -512,50 +759,5 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
         </div>
       )}
     </div>
-  )
-}
-
-// ── ViewRow ──────────────────────────────────────────────────────────────────
-
-function ViewRow({
-  item,
-  color,
-  catName,
-  onToggle,
-}: {
-  item: Item
-  color: { bg: string; dot: string } | null
-  catName: string | null
-  onToggle: (item: Item) => void
-}) {
-  return (
-    <tr style={{ background: color?.bg ?? 'transparent', opacity: item.packed ? 0.55 : 1, transition: 'opacity 180ms, background 120ms' }}>
-      <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
-        <input
-          type="checkbox"
-          checked={item.packed}
-          onChange={() => onToggle(item)}
-          style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }}
-        />
-      </td>
-      <td style={{ padding: '0', verticalAlign: 'middle' }}>
-        <div style={{ ...cellInner, textDecoration: item.packed ? 'line-through' : 'none' }}>{item.name}</div>
-      </td>
-      <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
-        <div style={{ ...cellInner, color: item.quantity > 1 ? 'var(--foreground)' : 'var(--fg-muted)' }}>
-          {item.quantity}
-        </div>
-      </td>
-      <td style={{ padding: '0', verticalAlign: 'middle' }}>
-        {color && catName ? (
-          <div style={{ ...cellInner, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color.dot, flexShrink: 0 }} />
-            <span style={{ fontSize: '13px', color: 'var(--fg-secondary)' }}>{catName}</span>
-          </div>
-        ) : (
-          <div style={{ ...cellInner, color: 'var(--fg-muted)', fontSize: '13px' }}>—</div>
-        )}
-      </td>
-    </tr>
   )
 }
