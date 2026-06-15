@@ -47,12 +47,23 @@ export default function BagsPage() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [confirmId, setConfirmId] = useState<number | null>(null)
+  const [duplicating, setDuplicating] = useState<number | null>(null)
 
   useEffect(() => {
     api.get<Bag[]>('/bags')
       .then(setBags)
       .finally(() => setLoading(false))
   }, [])
+
+  async function handleDuplicate(id: number) {
+    setDuplicating(id)
+    try {
+      const newBag = await api.post<Bag>(`/bags/${id}/duplicate`, {})
+      setBags(prev => [...prev, newBag])
+    } catch { /* silent */ } finally {
+      setDuplicating(null)
+    }
+  }
 
   async function handleDelete() {
     if (confirmId === null) return
@@ -98,7 +109,16 @@ export default function BagsPage() {
                 <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--foreground)' }}>{bag.name}</span>
                 <TypeBadge type={bag.type} />
               </div>
-              <button style={btnDestructive} onClick={e => { e.stopPropagation(); setConfirmId(bag.id) }}>Delete</button>
+              <div style={{ display: 'flex', gap: '4px' }} onClick={e => e.stopPropagation()}>
+                <button
+                  style={{ ...btnDestructive, color: 'var(--fg-muted)' }}
+                  disabled={duplicating === bag.id}
+                  onClick={() => handleDuplicate(bag.id)}
+                >
+                  {duplicating === bag.id ? '…' : 'Duplicate'}
+                </button>
+                <button style={btnDestructive} onClick={() => setConfirmId(bag.id)}>Delete</button>
+              </div>
             </div>
           ))}
         </div>

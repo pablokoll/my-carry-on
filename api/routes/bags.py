@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from errors import BadRequest, Conflict, NotFound
 from extensions import db, get_current_user_id
-from models import Bag, Trip, TripBag
+from models import Bag, Item, SubItem, Trip, TripBag
 
 bags_bp = Blueprint("bags", __name__)
 
@@ -60,6 +60,41 @@ def update_bag(bag_id):
     bag.type = data.get("type") if "type" in data else bag.type
     db.session.commit()
     return jsonify(bag.to_dict()), 200
+
+
+@bags_bp.route("/bags/<int:bag_id>/duplicate", methods=["POST"])
+@jwt_required()
+def duplicate_bag(bag_id):
+    user_id = get_current_user_id()
+    bag = Bag.query.get(bag_id)
+    if not bag or bag.user_id != user_id:
+        raise NotFound("Bag not found")
+
+    new_bag = Bag(user_id=user_id, name=f"{bag.name} (copy)", type=bag.type)
+    db.session.add(new_bag)
+    db.session.flush()
+
+    for item in bag.items:
+        new_item = Item(
+            bag_id=new_bag.id,
+            name=item.name,
+            category_id=item.category_id,
+            packed=False,
+        )
+        db.session.add(new_item)
+        db.session.flush()
+        for sub in item.sub_items:
+            db.session.add(SubItem(
+                item_id=new_item.id,
+                name=sub.name,
+                quantity=sub.quantity,
+                packed=False,
+            ))
+
+    db.session.commit()
+    result = new_bag.to_dict()
+    result["items"] = [i.to_dict() for i in new_bag.items]
+    return jsonify(result), 201
 
 
 @bags_bp.route("/bags/<int:bag_id>", methods=["DELETE"])
