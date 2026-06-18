@@ -11,7 +11,9 @@ trips_bp = Blueprint("trips", __name__)
 @jwt_required()
 def get_trips():
     user_id = get_current_user_id()
-    trips = Trip.query.filter_by(user_id=user_id).all()
+    limit = request.args.get("limit", type=int)
+    query = Trip.query.filter_by(user_id=user_id).order_by(Trip.is_active.desc(), Trip.start_date.desc())
+    trips = query.limit(limit).all() if limit else query.all()
     result = []
     for trip in trips:
         d = trip.to_dict()
