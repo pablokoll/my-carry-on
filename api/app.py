@@ -9,6 +9,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 from errors import register_error_handlers
 from extensions import db, jwt, migrate
 from routes.auth import auth_bp
+from routes.chat import chat_bp
 from routes.bags import bags_bp
 from routes.categories import categories_bp
 from routes.destinations import destinations_bp
@@ -35,6 +36,7 @@ def create_app():
     register_error_handlers(app)
 
     app.register_blueprint(health_bp)
+    app.register_blueprint(chat_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(trips_bp)
     app.register_blueprint(bags_bp)
