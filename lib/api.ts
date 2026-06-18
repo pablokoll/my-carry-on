@@ -54,8 +54,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Request failed' }))
-    const e = new Error(err.message ?? 'Request failed') as Error & { status: number }
+    const e = new Error(err.message ?? 'Request failed') as Error & { status: number; wait_seconds?: number; error?: string }
     e.status = res.status
+    e.wait_seconds = err.wait_seconds
+    e.error = err.error
     throw e
   }
 

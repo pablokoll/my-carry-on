@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "mcp__plugin_postman_postman__createCollectionFolder",
-      "mcp__plugin_postman_postman__createCollectionRequest"
+      "mcp__plugin_postman_postman__createCollectionRequest",
+      "mcp__plugin_postman_postman__getCollections",
+      "mcp__plugin_postman_postman__getCollectionFolder"
     ]
   }
 }

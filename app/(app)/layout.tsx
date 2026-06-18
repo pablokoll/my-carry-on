@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Nav } from '@/components/nav'
+import { ChatWindow } from '@/components/chat-window'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -19,6 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 16px' }}>
         {children}
       </main>
+      <ChatWindow />
     </div>
   )
 }
