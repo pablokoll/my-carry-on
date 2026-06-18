@@ -9,7 +9,7 @@ from extensions import db
 from models import ChatMessage, Trip
 
 _client = genai.Client(api_key=os.environ.get("API_KEY_AI_GOOGLE_STUDIO"))
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-2.5-flash-lite"
 
 OWM_API_KEY = os.environ.get("API_KEY_OPEN_WEATHER_MAP")
 
@@ -83,7 +83,13 @@ Guidelines:
 - Give practical advice tailored to destinations, weather, and dates.
 - When suggesting items to add, list the available bags and ask which one.
 - Be concise and friendly.
-- Respond in the same language the user writes in."""
+- Respond in the same language the user writes in.
+
+Formatting rules (strictly follow):
+- Use markdown: **bold** for item names or key terms, bullet lists with `-` for suggestions.
+- Keep responses short and scannable. Avoid long paragraphs.
+- Never use `*` for bullets — always use `-`.
+- Don't add unnecessary filler phrases. Get to the point."""
 
 
 def get_history(trip_id: int, user_id: int) -> list[ChatMessage]:
@@ -119,18 +125,22 @@ def compact_history(trip_id: int, user_id: int, messages: list[ChatMessage]) -> 
     db.session.commit()
 
 
+def _content(role: str, text: str) -> dict:
+    return {"role": role, "parts": [{"text": text}]}
+
+
 def build_gemini_history(messages: list[ChatMessage], system_prompt: str) -> list[dict]:
     history = [
-        {"role": "user", "parts": [system_prompt]},
-        {"role": "model", "parts": ["Understood! I'm ready to help pack for this trip."]},
+        _content("user", system_prompt),
+        _content("model", "Understood! I'm ready to help pack for this trip."),
     ]
 
     summary = next((m for m in reversed(messages) if m.role == "summary"), None)
 
     if summary:
         history += [
-            {"role": "user", "parts": [f"[Conversation summary so far]: {summary.content}"]},
-            {"role": "model", "parts": ["Got it, I have the context from our previous conversation."]},
+            _content("user", f"[Conversation summary so far]: {summary.content}"),
+            _content("model", "Got it, I have the context from our previous conversation."),
         ]
         cutoff = summary.created_at
         recent = [m for m in messages if m.role != "summary" and m.created_at > cutoff]
@@ -139,7 +149,7 @@ def build_gemini_history(messages: list[ChatMessage], system_prompt: str) -> lis
 
     for m in recent:
         role = "user" if m.role == "user" else "model"
-        history.append({"role": role, "parts": [m.content]})
+        history.append(_content(role, m.content))
 
     return history
 

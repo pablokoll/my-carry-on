@@ -60,8 +60,24 @@ def chat():
     gemini_history = build_gemini_history(db_history, system_prompt)
     user_message = messages[-1]["content"]
 
-    chat_session = _client.chats.create(model=MODEL, history=gemini_history)
-    response = chat_session.send_message(user_message)
+    from google.genai.errors import ClientError
+    try:
+        chat_session = _client.chats.create(model=MODEL, history=gemini_history)
+        response = chat_session.send_message(user_message)
+    except ClientError as e:
+        if e.code == 429:
+            retry_after = None
+            if hasattr(e, "response") and e.response is not None:
+                retry_after = e.response.headers.get("Retry-After")
+            wait_seconds = int(retry_after) if retry_after else 60
+            return jsonify({
+                "error": "rate_limit",
+                "message": "Límite de consultas alcanzado. Esperá antes de continuar.",
+                "wait_seconds": wait_seconds,
+            }), 429
+        raise
 
-    save_messages(trip_id, user_id, user_message, response.text)
-    return jsonify({"reply": response.text, "history": [m.to_dict() for m in get_history(trip_id, user_id)]}), 200
+    reply = response.text or response.candidates[0].content.parts[0].text
+
+    save_messages(trip_id, user_id, user_message, reply)
+    return jsonify({"reply": reply, "history": [m.to_dict() for m in get_history(trip_id, user_id)]}), 200
