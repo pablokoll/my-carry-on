@@ -1,26 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { api, clearTokens } from '@/lib/api'
+import { useState } from 'react'
+import { clearTokens } from '@/lib/api'
+import { useTrips, useCreateTrip } from '@/lib/queries'
 import { CreateTripModal } from '@/components/create-trip-modal'
+import type { Trip } from '@/lib/queries'
 
 interface BagSummary {
   id: number
   name: string
   type: string
-  items_total: number
-  items_packed: number
-}
-
-interface Trip {
-  id: number
-  name: string
-  is_active: boolean
-  start_date: string | null
-  end_date: string | null
-  bags: BagSummary[]
   items_total: number
   items_packed: number
 }
@@ -58,8 +50,9 @@ function ProgressBar({ value, total, color = 'var(--primary)' }: { value: number
 
 function ActiveTripCard({ trip }: { trip: Trip }) {
   const days = daysUntil(trip.start_date)
-  const pct = trip.items_total === 0 ? 0 : Math.round((trip.items_packed / trip.items_total) * 100)
-  const allDone = trip.items_total > 0 && trip.items_packed === trip.items_total
+  const pct = (trip.items_total ?? 0) === 0 ? 0 : Math.round(((trip.items_packed ?? 0) / (trip.items_total ?? 1)) * 100)
+  const allDone = (trip.items_total ?? 0) > 0 && trip.items_packed === trip.items_total
+  const bags = (trip.bags ?? []) as BagSummary[]
 
   return (
     <Link href={`/trips/${trip.id}`} style={{ textDecoration: 'none' }}>
@@ -72,7 +65,6 @@ function ActiveTripCard({ trip }: { trip: Trip }) {
         boxShadow: 'var(--shadow-sm)',
         cursor: 'pointer',
       }}>
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -98,20 +90,18 @@ function ActiveTripCard({ trip }: { trip: Trip }) {
           </div>
         </div>
 
-        {/* Overall progress */}
-        {trip.items_total > 0 && (
+        {(trip.items_total ?? 0) > 0 && (
           <div style={{ marginBottom: '16px' }}>
-            <ProgressBar value={trip.items_packed} total={trip.items_total} color={allDone ? '#5ea46e' : 'var(--primary)'} />
+            <ProgressBar value={trip.items_packed ?? 0} total={trip.items_total ?? 0} color={allDone ? '#5ea46e' : 'var(--primary)'} />
             <p style={{ fontSize: '12px', color: 'var(--fg-muted)', margin: '6px 0 0' }}>
               {trip.items_packed} / {trip.items_total} items packed
             </p>
           </div>
         )}
 
-        {/* Per-bag breakdown */}
-        {trip.bags.length > 0 && (
+        {bags.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {trip.bags.map(bag => {
+            {bags.map(bag => {
               const bagDone = bag.items_total > 0 && bag.items_packed === bag.items_total
               return (
                 <div key={bag.id}>
@@ -131,7 +121,7 @@ function ActiveTripCard({ trip }: { trip: Trip }) {
           </div>
         )}
 
-        {trip.bags.length === 0 && (
+        {bags.length === 0 && (
           <p style={{ fontSize: '13px', color: 'var(--fg-muted)', margin: 0 }}>No bags assigned yet.</p>
         )}
       </div>
@@ -141,29 +131,25 @@ function ActiveTripCard({ trip }: { trip: Trip }) {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [trips, setTrips] = useState<Trip[]>([])
-  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const { data: trips = [], isLoading, isError } = useTrips()
+  const createTrip = useCreateTrip()
 
   useEffect(() => {
     const token = localStorage.getItem('access_token')
-    if (!token) { router.replace('/login'); return }
-    api.get<Trip[]>('/trips')
-      .then(setTrips)
-      .catch(() => { clearTokens(); router.replace('/login') })
-      .finally(() => setLoading(false))
+    if (!token) { router.replace('/login') }
   }, [router])
 
-  function handleTripCreated(trip: { id: number; name: string; is_active: boolean; start_date: string | null; end_date: string | null }) {
-    setTrips(prev => [{ ...trip, bags: [], items_total: 0, items_packed: 0 }, ...prev])
-  }
+  useEffect(() => {
+    if (isError) { clearTokens(); router.replace('/login') }
+  }, [isError, router])
 
-  if (loading) {
+  if (isLoading) {
     return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
   }
 
-  const activeTrip = trips.find(t => t.is_active)
-  const otherTrips = trips.filter(t => !t.is_active)
+  const activeTrip = trips.find((t: Trip) => t.is_active)
+  const otherTrips = trips.filter((t: Trip) => !t.is_active)
 
   return (
     <>
@@ -185,7 +171,7 @@ export default function DashboardPage() {
         <p style={{ fontSize: '13px', color: 'var(--fg-muted)' }}>No other trips.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {otherTrips.map(trip => (
+          {otherTrips.map((trip: Trip) => (
             <Link key={trip.id} href={`/trips/${trip.id}`} style={{ textDecoration: 'none' }}>
               <div
                 style={{
@@ -211,12 +197,12 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                  {trip.items_total > 0 ? (
+                  {(trip.items_total ?? 0) > 0 ? (
                     <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>
-                      {Math.round((trip.items_packed / trip.items_total) * 100)}% packed
+                      {Math.round(((trip.items_packed ?? 0) / (trip.items_total ?? 1)) * 100)}% packed
                     </span>
                   ) : (
-                    <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>{trip.bags.length} bag{trip.bags.length !== 1 ? 's' : ''}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>{(trip.bags ?? []).length} bag{(trip.bags ?? []).length !== 1 ? 's' : ''}</span>
                   )}
                 </div>
               </div>
@@ -225,7 +211,14 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <CreateTripModal open={modalOpen} onClose={() => setModalOpen(false)} onCreated={handleTripCreated} />
+      <CreateTripModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreated={() => {
+          setModalOpen(false)
+          createTrip.reset()
+        }}
+      />
     </>
   )
 }

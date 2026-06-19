@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api } from "@/lib/api";
+import { useCreateBag } from "@/lib/queries";
 import { FormModal, Field } from "@/components/ui/form-modal";
 
 export interface Bag {
@@ -22,8 +22,8 @@ export function CreateBagModal({ open, onClose, onCreated }: Props) {
   const [name, setName] = useState("");
   const [type, setType] = useState<(typeof BAG_TYPES)[number]>("carry-on");
   const [nameError, setNameError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  const createBag = useCreateBag();
 
   function handleClose() {
     setName("");
@@ -40,15 +40,12 @@ export function CreateBagModal({ open, onClose, onCreated }: Props) {
     }
     setNameError("");
     setFormError("");
-    setSubmitting(true);
     try {
-      const bag = await api.post<Bag>("/bags", { name: name.trim(), type });
+      const bag = await createBag.mutateAsync({ name: name.trim(), type });
       onCreated(bag);
       handleClose();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : "Failed to create bag");
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -58,7 +55,7 @@ export function CreateBagModal({ open, onClose, onCreated }: Props) {
       onClose={handleClose}
       title="New bag"
       onSubmit={handleCreate}
-      submitting={submitting}
+      submitting={createBag.isPending}
       submitLabel="Create bag"
       error={formError}
     >

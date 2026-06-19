@@ -2,28 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { api, clearTokens } from '@/lib/api'
+import { clearTokens } from '@/lib/api'
+import {
+  useTripDetail, useTripBags, useTripDestinations, useAllBags, useCategories,
+  useUpdateTrip, useDeleteTrip, useToggleTripActive,
+  useAddDestination, useUpdateDestination, useDeleteDestination,
+  useAssignBag, useUnassignBag,
+  type Destination, type BagWithItems,
+} from '@/lib/queries'
+import { useQueryClient } from '@tanstack/react-query'
+import { keys } from '@/lib/queries'
 import { FormModal, Field } from '@/components/ui/form-modal'
 import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
 import { BagItemsTable, type Item, type Category } from '@/components/bag-items-table'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
-
-interface Trip {
-  id: number
-  name: string
-  is_active: boolean
-  start_date: string | null
-  end_date: string | null
-}
-
-interface Destination {
-  id: number
-  city: string
-  country: string
-  arrival_date: string | null
-  departure_date: string | null
-}
-
 
 const btnPrimary: React.CSSProperties = {
   background: 'var(--primary)',
@@ -80,22 +72,32 @@ function TypeBadge({ type }: { type: string }) {
 export default function TripPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const qc = useQueryClient()
 
-  const [trip, setTrip] = useState<Trip | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data: trip, isLoading, isError } = useTripDetail(id)
+  const { data: destinations = [], isLoading: destLoading } = useTripDestinations(id)
+  const { data: tripBags = [] } = useTripBags(id)
+  const { data: allBags = [] } = useAllBags()
+  const { data: categories = [] } = useCategories()
 
-  // edit trip
+  const updateTrip = useUpdateTrip(id)
+  const deleteTrip = useDeleteTrip(id)
+  const toggleActive = useToggleTripActive(id)
+  const addDest = useAddDestination(id)
+  const updateDest = useUpdateDestination(id)
+  const deleteDest = useDeleteDestination(id)
+  const assignBag = useAssignBag(id)
+  const unassignBag = useUnassignBag(id)
+
+  // edit trip form
   const [editOpen, setEditOpen] = useState(false)
   const [editName, setEditName] = useState('')
   const [editStart, setEditStart] = useState('')
   const [editEnd, setEditEnd] = useState('')
   const [editNameErr, setEditNameErr] = useState('')
-  const [editSubmitting, setEditSubmitting] = useState(false)
   const [editErr, setEditErr] = useState('')
 
-  // destinations
-  const [destinations, setDestinations] = useState<Destination[]>([])
-  const [destLoading, setDestLoading] = useState(true)
+  // destination form
   const [destOpen, setDestOpen] = useState(false)
   const [destCity, setDestCity] = useState('')
   const [destCountry, setDestCountry] = useState('')
@@ -103,81 +105,47 @@ export default function TripPage() {
   const [destDeparture, setDestDeparture] = useState('')
   const [destCityErr, setDestCityErr] = useState('')
   const [destCountryErr, setDestCountryErr] = useState('')
-  const [destSubmitting, setDestSubmitting] = useState(false)
   const [destErr, setDestErr] = useState('')
   const [editingDest, setEditingDest] = useState<Destination | null>(null)
 
-  // bags
-  const [allBags, setAllBags] = useState<Bag[]>([])
-  const [assignedBags, setAssignedBags] = useState<Bag[]>([])
+  // bag assignment
   const [bagOpen, setBagOpen] = useState(false)
   const [createBagOpen, setCreateBagOpen] = useState(false)
   const [selectedBagId, setSelectedBagId] = useState('')
-  const [bagSubmitting, setBagSubmitting] = useState(false)
   const [bagErr, setBagErr] = useState('')
-  // bag items & categories for inline table
-  const [bagItems, setBagItems] = useState<Record<number, Item[]>>({})
-  const [categories, setCategories] = useState<Category[]>([])
   const [expandedBags, setExpandedBags] = useState<Set<number>>(new Set())
-  const [bagReloadKey, setBagReloadKey] = useState(0)
-  // kebab menu
+
+  // kebab + confirms
   const [menuOpen, setMenuOpen] = useState(false)
-  // confirm modals
   const [confirmTrip, setConfirmTrip] = useState(false)
   const [confirmDestId, setConfirmDestId] = useState<number | null>(null)
   const [confirmBagId, setConfirmBagId] = useState<number | null>(null)
 
   useEffect(() => {
-    api.get<Trip>(`/trips/${id}`)
-      .then(setTrip)
-      .catch((e: Error & { status?: number }) => {
-        if (e.status === 401) { clearTokens(); router.replace('/login') }
-      })
-      .finally(() => setLoading(false))
+    if (isError) { clearTokens(); router.replace('/login') }
+  }, [isError, router])
 
-    api.get<Destination[]>(`/trips/${id}/destinations`)
-      .then(setDestinations)
-      .finally(() => setDestLoading(false))
-
-    api.get<Bag[]>('/bags').then(bags => {
-      setAllBags(bags)
-      if (bags.length > 0) setSelectedBagId(String(bags[0].id))
-    })
-
-    api.get<Category[]>('/categories').then(setCategories)
-
-    api.get<(Bag & { items: Item[] })[]>(`/trips/${id}/bags`)
-      .then(bags => {
-        setAssignedBags(bags.map(b => ({ id: b.id, name: b.name, type: b.type })))
-        const itemsMap: Record<number, Item[]> = {}
-        bags.forEach(b => { itemsMap[b.id] = b.items ?? [] })
-        setBagItems(itemsMap)
-      })
-  }, [id, router])
-
-  // Reload bags when chat assistant adds items or creates bags
+  // Invalidate tripBags when chat mutates a bag
   useEffect(() => {
-    function reloadBags(e: Event) {
+    function onBagMutated(e: Event) {
       const bagId = (e as CustomEvent<{ bag_id: number | null }>).detail?.bag_id
       if (bagId != null) {
-        api.get<Bag & { items: Item[] }>(`/bags/${bagId}`).then(bag => {
-          setBagItems(prev => ({ ...prev, [bag.id]: bag.items ?? [] }))
-          setBagReloadKey(k => k + 1)
-        })
+        qc.invalidateQueries({ queryKey: keys.bag(bagId) })
+        qc.invalidateQueries({ queryKey: keys.tripBags(id) })
       } else {
-        api.get<(Bag & { items: Item[] })[]>(`/trips/${id}/bags`).then(bags => {
-          setAssignedBags(bags.map(b => ({ id: b.id, name: b.name, type: b.type })))
-          const itemsMap: Record<number, Item[]> = {}
-          bags.forEach(b => { itemsMap[b.id] = b.items ?? [] })
-          setBagItems(itemsMap)
-          setBagReloadKey(k => k + 1)
-        })
-        api.get<Bag[]>('/bags').then(setAllBags)
+        qc.invalidateQueries({ queryKey: keys.tripBags(id) })
+        qc.invalidateQueries({ queryKey: keys.bags() })
       }
     }
-    window.addEventListener('chat:bag-mutated', reloadBags)
-    return () => window.removeEventListener('chat:bag-mutated', reloadBags)
-  }, [id])
+    window.addEventListener('chat:bag-mutated', onBagMutated)
+    return () => window.removeEventListener('chat:bag-mutated', onBagMutated)
+  }, [id, qc])
+
+  const assignedBags = tripBags.map((tb: BagWithItems) => ({ id: tb.id, name: tb.name, type: tb.type }))
+  const bagItemsMap: Record<number, Item[]> = {}
+  tripBags.forEach((tb: BagWithItems) => { bagItemsMap[tb.id] = tb.items ?? [] })
+
+  const unassignedBags = allBags.filter((b: Bag) => !assignedBags.find((a: { id: number }) => a.id === b.id))
 
   // --- edit trip ---
   function openEdit() {
@@ -185,61 +153,32 @@ export default function TripPage() {
     setEditName(trip.name)
     setEditStart(trip.start_date ?? '')
     setEditEnd(trip.end_date ?? '')
-    setEditNameErr('')
-    setEditErr('')
+    setEditNameErr(''); setEditErr('')
     setEditOpen(true)
-  }
-
-  function closeEdit() { setEditOpen(false); setEditNameErr(''); setEditErr('') }
-
-  async function handleDeleteTrip() {
-    try {
-      await api.delete(`/trips/${id}`)
-      router.replace('/')
-    } catch { /* silent */ }
-  }
-
-  async function handleToggleActive() {
-    if (!trip) return
-    try {
-      const endpoint = trip.is_active ? `/trips/${id}/deactivate` : `/trips/${id}/activate`
-      const updated = await api.post<Trip>(endpoint, {})
-      setTrip(updated)
-    } catch { /* silent */ }
   }
 
   async function handleEditTrip() {
     if (!editName.trim()) { setEditNameErr('Name is required'); return }
-    setEditNameErr(''); setEditErr(''); setEditSubmitting(true)
+    setEditNameErr(''); setEditErr('')
     try {
-      const updated = await api.put<Trip>(`/trips/${id}`, {
-        name: editName.trim(),
-        start_date: editStart || null,
-        end_date: editEnd || null,
-      })
-      setTrip(updated)
-      closeEdit()
+      await updateTrip.mutateAsync({ name: editName.trim(), start_date: editStart || null, end_date: editEnd || null })
+      setEditOpen(false)
     } catch (e) {
       setEditErr(e instanceof Error ? e.message : 'Failed to update trip')
-    } finally {
-      setEditSubmitting(false)
     }
   }
 
   // --- destinations ---
   function closeDestModal() {
-    setDestOpen(false)
-    setEditingDest(null)
+    setDestOpen(false); setEditingDest(null)
     setDestCity(''); setDestCountry(''); setDestArrival(''); setDestDeparture('')
     setDestCityErr(''); setDestCountryErr(''); setDestErr('')
   }
 
   function openEditDest(dest: Destination) {
     setEditingDest(dest)
-    setDestCity(dest.city)
-    setDestCountry(dest.country)
-    setDestArrival(dest.arrival_date ?? '')
-    setDestDeparture(dest.departure_date ?? '')
+    setDestCity(dest.city); setDestCountry(dest.country)
+    setDestArrival(dest.arrival_date ?? ''); setDestDeparture(dest.departure_date ?? '')
     setDestCityErr(''); setDestCountryErr(''); setDestErr('')
     setDestOpen(true)
   }
@@ -249,93 +188,46 @@ export default function TripPage() {
     if (!destCity.trim()) { setDestCityErr('City is required'); valid = false } else setDestCityErr('')
     if (!destCountry.trim()) { setDestCountryErr('Country is required'); valid = false } else setDestCountryErr('')
     if (!valid) return
-    setDestErr(''); setDestSubmitting(true)
+    setDestErr('')
+    const data = { city: destCity.trim(), country: destCountry.trim(), arrival_date: destArrival || null, departure_date: destDeparture || null }
     try {
       if (editingDest) {
-        const updated = await api.put<Destination>(`/destinations/${editingDest.id}`, {
-          city: destCity.trim(),
-          country: destCountry.trim(),
-          arrival_date: destArrival || null,
-          departure_date: destDeparture || null,
-        })
-        setDestinations(prev => prev.map(d => d.id === updated.id ? updated : d))
+        await updateDest.mutateAsync({ destId: editingDest.id, data })
       } else {
-        const dest = await api.post<Destination>(`/trips/${id}/destinations`, {
-          city: destCity.trim(),
-          country: destCountry.trim(),
-          arrival_date: destArrival || null,
-          departure_date: destDeparture || null,
-        })
-        setDestinations(prev => [...prev, dest])
+        await addDest.mutateAsync(data)
       }
       closeDestModal()
     } catch (e) {
-      setDestErr(e instanceof Error ? e.message : editingDest ? 'Failed to update destination' : 'Failed to add destination')
-    } finally {
-      setDestSubmitting(false)
-    }
-  }
-
-  async function handleDeleteDestination() {
-    if (confirmDestId === null) return
-    try {
-      await api.delete(`/destinations/${confirmDestId}`)
-      setDestinations(prev => prev.filter(d => d.id !== confirmDestId))
-    } catch { /* silent */ } finally {
-      setConfirmDestId(null)
+      setDestErr(e instanceof Error ? e.message : 'Failed to save destination')
     }
   }
 
   // --- bags ---
-  const unassignedBags = allBags.filter(b => !assignedBags.find(a => a.id === b.id))
-
   function openBagModal() {
     const first = unassignedBags[0]
     setSelectedBagId(first ? String(first.id) : '')
-    setBagErr('')
-    setBagOpen(true)
+    setBagErr(''); setBagOpen(true)
   }
-
-  function closeBagModal() { setBagOpen(false); setBagErr('') }
 
   async function handleAssignBag() {
     if (!selectedBagId) return
-    setBagSubmitting(true); setBagErr('')
+    setBagErr('')
     try {
-      await api.post(`/trips/${id}/bags`, { bag_id: Number(selectedBagId) })
-      const bag = allBags.find(b => b.id === Number(selectedBagId))
-      if (bag) {
-        setAssignedBags(prev => [...prev, bag])
-        setBagItems(prev => ({ ...prev, [bag.id]: prev[bag.id] ?? [] }))
-      }
-      closeBagModal()
+      await assignBag.mutateAsync(Number(selectedBagId))
+      setBagOpen(false)
     } catch (e) {
       setBagErr(e instanceof Error ? e.message : 'Failed to assign bag')
-    } finally {
-      setBagSubmitting(false)
-    }
-  }
-
-  async function handleUnassignBag() {
-    if (confirmBagId === null) return
-    try {
-      await api.delete(`/trips/${id}/bags/${confirmBagId}`)
-      setAssignedBags(prev => prev.filter(b => b.id !== confirmBagId))
-    } catch { /* silent */ } finally {
-      setConfirmBagId(null)
     }
   }
 
   async function handleBagCreated(bag: Bag) {
-    setAllBags(prev => [...prev, bag])
     try {
-      await api.post(`/trips/${id}/bags`, { bag_id: bag.id })
-      setAssignedBags(prev => [...prev, bag])
-      setBagItems(prev => ({ ...prev, [bag.id]: [] }))
+      await assignBag.mutateAsync(bag.id)
     } catch { /* silent */ }
+    setCreateBagOpen(false)
   }
 
-  if (loading) return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
+  if (isLoading) return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
   if (!trip) return <p style={{ color: 'var(--destructive)', textAlign: 'center', paddingTop: '48px' }}>Trip not found.</p>
 
   return (
@@ -355,19 +247,16 @@ export default function TripPage() {
             </p>
           )}
         </div>
-        {/* Kebab menu */}
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setMenuOpen(o => !o)}
             style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 10px', fontSize: '18px', color: 'var(--fg-secondary)', cursor: 'pointer', lineHeight: 1 }}
-          >
-            ⋯
-          </button>
+          >⋯</button>
           {menuOpen && (
             <>
               <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setMenuOpen(false)} />
               <div style={{ position: 'absolute', right: 0, top: '36px', zIndex: 20, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', boxShadow: 'var(--shadow-md)', minWidth: '140px', overflow: 'hidden' }}>
-                <button onClick={() => { handleToggleActive(); setMenuOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}>
+                <button onClick={() => { toggleActive.mutate(trip.is_active); setMenuOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}>
                   {trip.is_active ? 'Deactivate' : 'Active'}
                 </button>
                 <button onClick={() => { openEdit(); setMenuOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--foreground)', borderTop: '1px solid var(--border)' }}>
@@ -394,7 +283,7 @@ export default function TripPage() {
           <p style={{ color: 'var(--fg-muted)', fontSize: '14px' }}>No destinations yet.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {destinations.map(dest => (
+            {destinations.map((dest: Destination) => (
               <div key={dest.id} style={rowStyle}>
                 <div>
                   <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--foreground)' }}>{dest.city}, {dest.country}</span>
@@ -434,11 +323,11 @@ export default function TripPage() {
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {assignedBags.map(bag => {
+            {assignedBags.map((bag: { id: number; name: string; type: string }) => {
               const expanded = expandedBags.has(bag.id)
+              const items = bagItemsMap[bag.id] ?? []
               return (
                 <div key={bag.id} style={{ background: 'var(--bg-surface)', borderRadius: '10px', overflow: 'hidden' }}>
-                  {/* Bag header row */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
                     <button
                       style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, flex: 1, textAlign: 'left' }}
@@ -451,8 +340,7 @@ export default function TripPage() {
                       <span style={{ fontSize: '13px', color: 'var(--fg-muted)', lineHeight: 1, transition: 'transform 120ms', display: 'inline-block', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
                       <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--foreground)' }}>{bag.name}</span>
                       <TypeBadge type={bag.type} />
-                      {bagItems[bag.id] && (() => {
-                        const items = bagItems[bag.id]
+                      {(() => {
                         let total = 0, packed = 0
                         for (const i of items) {
                           if (i.sub_items?.length) {
@@ -470,15 +358,17 @@ export default function TripPage() {
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '16px', lineHeight: 1, padding: '4px 6px', flexShrink: 0 }}
                     >×</button>
                   </div>
-                  {/* Expanded items table */}
                   {expanded && (
                     <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px' }}>
                       <BagItemsTable
-                        key={bagReloadKey}
                         bagId={bag.id}
-                        initialItems={bagItems[bag.id] ?? []}
-                        categories={categories}
-                        onItemsChange={items => setBagItems(prev => ({ ...prev, [bag.id]: items }))}
+                        initialItems={items}
+                        categories={categories as Category[]}
+                        onItemsChange={updated => {
+                          qc.setQueryData(keys.tripBags(id), (old: BagWithItems[] | undefined) =>
+                            old?.map((tb: BagWithItems) => tb.id === bag.id ? { ...tb, items: updated } : tb)
+                          )
+                        }}
                       />
                     </div>
                   )}
@@ -492,10 +382,10 @@ export default function TripPage() {
       {/* Edit trip modal */}
       <FormModal
         open={editOpen}
-        onClose={closeEdit}
+        onClose={() => setEditOpen(false)}
         title="Edit trip"
         onSubmit={handleEditTrip}
-        submitting={editSubmitting}
+        submitting={updateTrip.isPending}
         submitLabel="Save"
         error={editErr}
       >
@@ -516,7 +406,7 @@ export default function TripPage() {
         onClose={closeDestModal}
         title={editingDest ? 'Edit destination' : 'Add destination'}
         onSubmit={handleAddDestination}
-        submitting={destSubmitting}
+        submitting={addDest.isPending || updateDest.isPending}
         submitLabel={editingDest ? 'Save' : 'Add'}
         error={destErr}
       >
@@ -536,25 +426,21 @@ export default function TripPage() {
         </div>
       </FormModal>
 
-      <CreateBagModal
-        open={createBagOpen}
-        onClose={() => setCreateBagOpen(false)}
-        onCreated={handleBagCreated}
-      />
+      <CreateBagModal open={createBagOpen} onClose={() => setCreateBagOpen(false)} onCreated={handleBagCreated} />
 
       {/* Assign bag modal */}
       <FormModal
         open={bagOpen}
-        onClose={closeBagModal}
+        onClose={() => setBagOpen(false)}
         title="Assign bag"
         onSubmit={handleAssignBag}
-        submitting={bagSubmitting}
+        submitting={assignBag.isPending}
         submitLabel="Assign"
         error={bagErr}
       >
         <Field label="Bag">
           <select value={selectedBagId} onChange={e => setSelectedBagId(e.target.value)} style={{ cursor: 'pointer' }}>
-            {unassignedBags.map(b => (
+            {unassignedBags.map((b: Bag) => (
               <option key={b.id} value={String(b.id)}>{b.name} ({b.type})</option>
             ))}
           </select>
@@ -566,21 +452,21 @@ export default function TripPage() {
         title="Delete trip?"
         description="This cannot be undone."
         confirmLabel="Delete"
-        onConfirm={handleDeleteTrip}
+        onConfirm={async () => { await deleteTrip.mutateAsync(); router.replace('/') }}
         onCancel={() => setConfirmTrip(false)}
       />
       <ConfirmModal
         open={confirmDestId !== null}
         title="Remove destination?"
         confirmLabel="Remove"
-        onConfirm={handleDeleteDestination}
+        onConfirm={() => { if (confirmDestId !== null) deleteDest.mutate(confirmDestId); setConfirmDestId(null) }}
         onCancel={() => setConfirmDestId(null)}
       />
       <ConfirmModal
         open={confirmBagId !== null}
         title="Remove bag from trip?"
         confirmLabel="Remove"
-        onConfirm={handleUnassignBag}
+        onConfirm={() => { if (confirmBagId !== null) unassignBag.mutate(confirmBagId); setConfirmBagId(null) }}
         onCancel={() => setConfirmBagId(null)}
       />
     </>

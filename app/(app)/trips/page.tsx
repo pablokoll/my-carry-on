@@ -3,16 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { api, clearTokens } from '@/lib/api'
+import { clearTokens } from '@/lib/api'
+import { useTrips, type Trip } from '@/lib/queries'
 import { CreateTripModal } from '@/components/create-trip-modal'
-
-interface Trip {
-  id: number
-  name: string
-  is_active: boolean
-  start_date: string | null
-  end_date: string | null
-}
 
 const btnPrimary: React.CSSProperties = {
   background: 'var(--primary)',
@@ -27,20 +20,14 @@ const btnPrimary: React.CSSProperties = {
 
 export default function TripsPage() {
   const router = useRouter()
-  const [trips, setTrips] = useState<Trip[]>([])
-  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const { data: trips = [], isLoading, isError } = useTrips()
 
   useEffect(() => {
-    api.get<Trip[]>('/trips')
-      .then(setTrips)
-      .catch(() => { clearTokens(); router.replace('/login') })
-      .finally(() => setLoading(false))
-  }, [router])
+    if (isError) { clearTokens(); router.replace('/login') }
+  }, [isError, router])
 
-  function handleTripCreated(trip: Trip) { setTrips(prev => [trip, ...prev]) }
-
-  if (loading) {
+  if (isLoading) {
     return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
   }
 
@@ -58,7 +45,7 @@ export default function TripsPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {trips.map(trip => (
+          {trips.map((trip: Trip) => (
             <Link key={trip.id} href={`/trips/${trip.id}`} style={{ textDecoration: 'none' }}>
               <div
                 style={{
@@ -90,7 +77,7 @@ export default function TripsPage() {
         </div>
       )}
 
-      <CreateTripModal open={modalOpen} onClose={() => setModalOpen(false)} onCreated={handleTripCreated} />
+      <CreateTripModal open={modalOpen} onClose={() => setModalOpen(false)} onCreated={() => setModalOpen(false)} />
     </>
   )
 }

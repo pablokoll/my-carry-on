@@ -1,6 +1,20 @@
 'use client'
 
 import React, { useRef, useState } from 'react'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  getGroupedRowModel,
+  getExpandedRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+  type ColumnFiltersState,
+  type GroupingState,
+  type ExpandedState,
+} from '@tanstack/react-table'
 import { api } from '@/lib/api'
 
 export interface Category {
@@ -25,7 +39,6 @@ export interface Item {
   sub_items: SubItem[]
 }
 
-// Stable palette — index maps to category id % COLORS.length
 const COLORS = [
   { bg: 'rgba(74,123,181,0.08)',  dot: '#4a7bb5' },
   { bg: 'rgba(94,164,110,0.10)',  dot: '#5ea46e' },
@@ -62,9 +75,6 @@ interface SubDraft {
   packed: boolean
   deleted?: boolean
 }
-
-type SortKey = 'name' | 'category' | 'quantity'
-type GroupMode = 'none' | 'category'
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 
@@ -194,12 +204,13 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   const [saving, setSaving] = useState(false)
   const [saveErr, setSaveErr] = useState('')
 
-  const [sortKey, setSortKey] = useState<SortKey>('category')
-  const [sortAsc, setSortAsc] = useState(true)
-  const [groupMode, setGroupMode] = useState<GroupMode>('category')
-  const [filterCatId, setFilterCatId] = useState<number | 'all'>('all')
+  // TanStack Table state
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'category', desc: false }])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [grouping, setGrouping] = useState<GroupingState>(['category'])
+  const [expanded, setExpanded] = useState<ExpandedState>({})
 
-  // expanded item ids (view mode and edit mode)
+  // sub-item expand state (separate from table row grouping expand)
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set())
 
   const firstInputRef = useRef<HTMLInputElement>(null)
@@ -217,29 +228,74 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
     })
   }
 
+  // ── TanStack Table columns ─────────────────────────────────────────────────
+
+  const columns: ColumnDef<Item>[] = [
+    {
+      id: 'packed',
+      size: 36,
+    },
+    {
+      accessorKey: 'name',
+      header: 'Name',
+      enableSorting: true,
+      enableGrouping: false,
+    },
+    {
+      accessorKey: 'quantity',
+      header: 'Qty',
+      size: 52,
+      enableSorting: true,
+      enableGrouping: false,
+    },
+    {
+      id: 'category',
+      accessorFn: (row) => {
+        const cat = categories.find(c => c.id === row.category_id)
+        return cat?.name ?? 'Uncategorized'
+      },
+      header: 'Category',
+      size: 110,
+      enableSorting: true,
+      enableGrouping: true,
+      filterFn: (row, _, value) => {
+        if (value === 'all') return true
+        return row.original.category_id === value
+      },
+    },
+  ]
+
+  const table = useReactTable({
+    data: serverItems,
+    columns,
+    state: { sorting, columnFilters, grouping, expanded },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGroupingChange: setGrouping,
+    onExpandedChange: setExpanded,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    autoResetExpanded: false,
+  })
+
   // ── Edit mode ──────────────────────────────────────────────────────────────
 
   function enterEdit() {
     setDrafts(serverItems.map(i => ({ ...i })))
     const subs: Record<number, SubDraft[]> = {}
-    serverItems.forEach(i => {
-      subs[i.id] = i.sub_items.map(s => ({ ...s }))
-    })
+    serverItems.forEach(i => { subs[i.id] = i.sub_items.map(s => ({ ...s })) })
     setSubDrafts(subs)
-    setNameErrors(new Set())
-    setSubNameErrors(new Set())
-    setSaveErr('')
+    setNameErrors(new Set()); setSubNameErrors(new Set()); setSaveErr('')
     setEditMode(true)
     setTimeout(() => firstInputRef.current?.focus(), 50)
   }
 
   function cancelEdit() {
-    setEditMode(false)
-    setDrafts([])
-    setSubDrafts({})
-    setNameErrors(new Set())
-    setSubNameErrors(new Set())
-    setSaveErr('')
+    setEditMode(false); setDrafts([]); setSubDrafts({})
+    setNameErrors(new Set()); setSubNameErrors(new Set()); setSaveErr('')
   }
 
   function updateDraft(id: number, patch: Partial<RowDraft>) {
@@ -251,13 +307,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
 
   function addRow() {
     const tid = nextTempId()
-    setDrafts(prev => [...prev, {
-      id: tid,
-      name: '',
-      quantity: 1,
-      packed: false,
-      category_id: categories[0]?.id ?? null,
-    }])
+    setDrafts(prev => [...prev, { id: tid, name: '', quantity: 1, packed: false, category_id: categories[0]?.id ?? null }])
     setSubDrafts(prev => ({ ...prev, [tid]: [] }))
     setTimeout(() => {
       const inputs = document.querySelectorAll<HTMLInputElement>('[data-row-name]')
@@ -274,15 +324,11 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
     setNameErrors(prev => { const s = new Set(prev); s.delete(id); return s })
   }
 
-  // Sub-item draft helpers
-  function getSubDraftsForItem(itemId: number): SubDraft[] {
-    return subDrafts[itemId] ?? []
-  }
+  function getSubDraftsForItem(itemId: number): SubDraft[] { return subDrafts[itemId] ?? [] }
 
   function addSubRow(itemId: number) {
     const tid = nextTempId()
-    const newSub: SubDraft = { id: tid, item_id: itemId, name: '', quantity: 1, packed: false }
-    setSubDrafts(prev => ({ ...prev, [itemId]: [...(prev[itemId] ?? []), newSub] }))
+    setSubDrafts(prev => ({ ...prev, [itemId]: [...(prev[itemId] ?? []), { id: tid, item_id: itemId, name: '', quantity: 1, packed: false }] }))
     setExpandedItems(prev => { const s = new Set(prev); s.add(itemId); return s })
     setTimeout(() => {
       const inputs = document.querySelectorAll<HTMLInputElement>(`[data-sub-name="${itemId}"]`)
@@ -291,10 +337,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   }
 
   function updateSubDraft(itemId: number, subId: number, patch: Partial<SubDraft>) {
-    setSubDrafts(prev => ({
-      ...prev,
-      [itemId]: (prev[itemId] ?? []).map(s => s.id === subId ? { ...s, ...patch } : s),
-    }))
+    setSubDrafts(prev => ({ ...prev, [itemId]: (prev[itemId] ?? []).map(s => s.id === subId ? { ...s, ...patch } : s) }))
     if (patch.name !== undefined && subNameErrors.has(subId)) {
       setSubNameErrors(prev => { const s = new Set(prev); s.delete(subId); return s })
     }
@@ -302,15 +345,9 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
 
   function removeSubRow(itemId: number, subId: number) {
     if (subId > 0) {
-      setSubDrafts(prev => ({
-        ...prev,
-        [itemId]: (prev[itemId] ?? []).map(s => s.id === subId ? { ...s, deleted: true } : s),
-      }))
+      setSubDrafts(prev => ({ ...prev, [itemId]: (prev[itemId] ?? []).map(s => s.id === subId ? { ...s, deleted: true } : s) }))
     } else {
-      setSubDrafts(prev => ({
-        ...prev,
-        [itemId]: (prev[itemId] ?? []).filter(s => s.id !== subId),
-      }))
+      setSubDrafts(prev => ({ ...prev, [itemId]: (prev[itemId] ?? []).filter(s => s.id !== subId) }))
     }
     setSubNameErrors(prev => { const s = new Set(prev); s.delete(subId); return s })
   }
@@ -318,14 +355,11 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   async function handleSave() {
     const errors = new Set<number>()
     drafts.forEach(d => { if (!d.deleted && !d.name.trim()) errors.add(d.id) })
-
     const subErrors = new Set<number>()
     Object.values(subDrafts).flat().forEach(s => { if (!s.deleted && !s.name.trim()) subErrors.add(s.id) })
 
     if (errors.size > 0 || subErrors.size > 0) {
-      setNameErrors(errors)
-      setSubNameErrors(subErrors)
-      return
+      setNameErrors(errors); setSubNameErrors(subErrors); return
     }
 
     setSaving(true); setSaveErr('')
@@ -337,35 +371,20 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
       })
       const toDelete = drafts.filter(d => d.id > 0 && d.deleted)
 
-      const [created, updated] = await Promise.all([
-        Promise.all(toCreate.map(d =>
-          api.post<Item>(`/bags/${bagId}/items`, {
-            name: d.name.trim(),
-            quantity: d.quantity,
-            category_id: d.category_id,
-          })
-        )),
-        Promise.all(toUpdate.map(d =>
-          api.put<Item>(`/items/${d.id}`, {
-            name: d.name.trim(),
-            quantity: d.quantity,
-            category_id: d.category_id,
-          })
-        )),
+      const [created] = await Promise.all([
+        Promise.all(toCreate.map(d => api.post<Item>(`/bags/${bagId}/items`, { name: d.name.trim(), quantity: d.quantity, category_id: d.category_id }))),
+        Promise.all(toUpdate.map(d => api.put<Item>(`/items/${d.id}`, { name: d.name.trim(), quantity: d.quantity, category_id: d.category_id }))),
         Promise.all(toDelete.map(d => api.delete(`/items/${d.id}`))),
       ])
 
-      // Map temp ids to real ids for sub-item creation
       const tempToReal = new Map<number, number>()
       toCreate.forEach((d, idx) => tempToReal.set(d.id, created[idx].id))
 
-      // Persist sub-item drafts
       const subOps: Promise<unknown>[] = []
       for (const [rawItemId, subs] of Object.entries(subDrafts)) {
         const draftItemId = Number(rawItemId)
         const realItemId = draftItemId < 0 ? tempToReal.get(draftItemId) : draftItemId
         if (!realItemId) continue
-
         for (const s of subs) {
           if (s.id < 0 && !s.deleted) {
             subOps.push(api.post(`/items/${realItemId}/sub-items`, { name: s.name.trim(), quantity: s.quantity }))
@@ -382,12 +401,9 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
       }
       await Promise.all(subOps)
 
-      // Reload items to get fresh sub_items counts and data
       const freshItems = await api.get<Item[]>(`/bags/${bagId}/items`)
       syncItems(freshItems)
-      setEditMode(false)
-      setDrafts([])
-      setSubDrafts({})
+      setEditMode(false); setDrafts([]); setSubDrafts({})
     } catch (e) {
       setSaveErr(e instanceof Error ? e.message : 'Failed to save')
     } finally {
@@ -406,97 +422,33 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
     try {
       await api.put<SubItem>(`/sub-items/${sub.id}`, { packed: !sub.packed })
       syncItems(serverItems.map(i =>
-        i.id === itemId
-          ? { ...i, sub_items: i.sub_items.map(s => s.id === sub.id ? { ...s, packed: !s.packed } : s) }
-          : i
+        i.id === itemId ? { ...i, sub_items: i.sub_items.map(s => s.id === sub.id ? { ...s, packed: !s.packed } : s) } : i
       ))
     } catch { /* silent */ }
   }
 
-  // ── View helpers ───────────────────────────────────────────────────────────
-
-  function sortList<T extends { name: string; quantity: number; category_id: number | null }>(list: T[]): T[] {
-    return [...list].sort((a, b) => {
-      let cmp = 0
-      if (sortKey === 'name') cmp = a.name.localeCompare(b.name)
-      else if (sortKey === 'quantity') cmp = a.quantity - b.quantity
-      else {
-        const ca = categories.find(c => c.id === a.category_id)?.name ?? 'zz'
-        const cb = categories.find(c => c.id === b.category_id)?.name ?? 'zz'
-        cmp = ca.localeCompare(cb)
-      }
-      return sortAsc ? cmp : -cmp
-    })
-  }
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) setSortAsc(a => !a)
-    else { setSortKey(key); setSortAsc(true) }
-  }
-
-  function sortIcon(key: SortKey) {
-    if (sortKey !== key) return <span style={{ opacity: 0.3 }}>↕</span>
-    return <span>{sortAsc ? '↑' : '↓'}</span>
-  }
-
-  const visibleItems = (() => {
-    const list = filterCatId === 'all' ? serverItems : serverItems.filter(i => i.category_id === filterCatId)
-    return sortList(list)
-  })()
-
-  const visibleDrafts = drafts.filter(d => !d.deleted)
-
-  function groupByCategory<T extends { category_id: number | null }>(list: T[]) {
-    const map = new Map<number | null, T[]>()
-    for (const item of list) {
-      const key = item.category_id
-      if (!map.has(key)) map.set(key, [])
-      map.get(key)!.push(item)
-    }
-    return Array.from(map.entries())
-      .map(([catId, items]) => ({
-        catId,
-        label: categories.find(c => c.id === catId)?.name ?? 'Uncategorized',
-        items,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label))
-  }
-
-  const packed = serverItems.filter(i => i.packed).length
-  const isEmpty = serverItems.length === 0 && !editMode
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render helpers ─────────────────────────────────────────────────────────
 
   function renderViewItem(item: Item, catName: string | null) {
     const color = catColor(item.category_id)
-    const expanded = expandedItems.has(item.id)
+    const expandedSubs = expandedItems.has(item.id)
     const hasSubs = item.sub_items.length > 0
 
     return (
       <React.Fragment key={item.id}>
-        <tr style={{ background: color?.bg ?? 'transparent', opacity: item.packed ? 0.55 : 1, transition: 'opacity 180ms, background 120ms' }}>
+        <tr style={{ background: color?.bg ?? 'transparent', opacity: item.packed ? 0.55 : 1, transition: 'opacity 180ms' }}>
           <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
             {hasSubs ? (
-              <button
-                onClick={() => toggleExpand(item.id)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '10px', padding: '0 8px', lineHeight: 1, transition: 'transform 120ms', transform: expanded ? 'rotate(90deg)' : 'none' }}
-              >▶</button>
+              <button onClick={() => toggleExpand(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '10px', padding: '0 8px', lineHeight: 1, transition: 'transform 120ms', transform: expandedSubs ? 'rotate(90deg)' : 'none' }}>▶</button>
             ) : (
-              <input
-                type="checkbox"
-                checked={item.packed}
-                onChange={() => togglePacked(item)}
-                style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }}
-              />
+              <input type="checkbox" checked={item.packed} onChange={() => togglePacked(item)} style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }} />
             )}
           </td>
           <td style={{ padding: '0', verticalAlign: 'middle' }}>
             <div style={{ ...cellInner, textDecoration: item.packed ? 'line-through' : 'none' }}>{item.name}</div>
           </td>
           <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
-            <div style={{ ...cellInner, color: item.quantity > 1 ? 'var(--foreground)' : 'var(--fg-muted)' }}>
-              {item.quantity}
-            </div>
+            <div style={{ ...cellInner, color: item.quantity > 1 ? 'var(--foreground)' : 'var(--fg-muted)' }}>{item.quantity}</div>
           </td>
           <td style={{ padding: '0', verticalAlign: 'middle' }}>
             {color && catName ? (
@@ -509,25 +461,16 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
             )}
           </td>
         </tr>
-        {hasSubs && expanded && item.sub_items.map(sub => (
+        {hasSubs && expandedSubs && item.sub_items.map(sub => (
           <tr key={`sub-${sub.id}`} style={{ background: color ? color.bg : 'transparent', opacity: sub.packed ? 0.5 : 0.85 }}>
             <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
-              <input
-                type="checkbox"
-                checked={sub.packed}
-                onChange={() => toggleSubPacked(item.id, sub)}
-                style={{ width: '13px', height: '13px', accentColor: 'var(--primary)', cursor: 'pointer' }}
-              />
+              <input type="checkbox" checked={sub.packed} onChange={() => toggleSubPacked(item.id, sub)} style={{ width: '13px', height: '13px', accentColor: 'var(--primary)', cursor: 'pointer' }} />
             </td>
             <td style={{ padding: '0', verticalAlign: 'middle' }}>
-              <div style={{ ...cellInner, fontSize: '12px', paddingLeft: '24px', textDecoration: sub.packed ? 'line-through' : 'none', color: 'var(--fg-secondary)' }}>
-                {sub.name}
-              </div>
+              <div style={{ ...cellInner, fontSize: '12px', paddingLeft: '24px', textDecoration: sub.packed ? 'line-through' : 'none', color: 'var(--fg-secondary)' }}>{sub.name}</div>
             </td>
             <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
-              <div style={{ ...cellInner, fontSize: '12px', color: sub.quantity > 1 ? 'var(--foreground)' : 'var(--fg-muted)' }}>
-                {sub.quantity}
-              </div>
+              <div style={{ ...cellInner, fontSize: '12px', color: sub.quantity > 1 ? 'var(--foreground)' : 'var(--fg-muted)' }}>{sub.quantity}</div>
             </td>
             <td />
           </tr>
@@ -538,7 +481,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
 
   function renderEditItem(draft: RowDraft, idx: number) {
     const color = catColor(draft.category_id)
-    const expanded = expandedItems.has(draft.id)
+    const expandedSubs = expandedItems.has(draft.id)
     const subs = getSubDraftsForItem(draft.id).filter(s => !s.deleted)
     const hasSubs = subs.length > 0
 
@@ -546,19 +489,11 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
       <React.Fragment key={draft.id}>
         <tr style={{ background: color?.bg ?? 'transparent', transition: 'background 120ms' }}>
           <td style={td}>
-            <button
-              style={{ ...btnGhost, color: 'var(--destructive)', padding: '0 8px', fontSize: '16px', lineHeight: 1 }}
-              onClick={() => removeRow(draft.id)}
-              title="Remove"
-            >×</button>
+            <button style={{ ...btnGhost, color: 'var(--destructive)', padding: '0 8px', fontSize: '16px', lineHeight: 1 }} onClick={() => removeRow(draft.id)} title="Remove">×</button>
           </td>
           <td style={td}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {/* sub-item toggle in edit mode */}
-              <button
-                onClick={() => toggleExpand(draft.id)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '10px', padding: '0 4px', lineHeight: 1, transition: 'transform 120ms', transform: expanded ? 'rotate(90deg)' : 'none', flexShrink: 0 }}
-              >▶</button>
+              <button onClick={() => toggleExpand(draft.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '10px', padding: '0 4px', lineHeight: 1, transition: 'transform 120ms', transform: expandedSubs ? 'rotate(90deg)' : 'none', flexShrink: 0 }}>▶</button>
               <input
                 ref={idx === 0 ? firstInputRef : undefined}
                 data-row-name
@@ -578,9 +513,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
               <div style={{ ...cellInner, color: 'var(--fg-muted)', fontSize: '13px', textAlign: 'center' }}>{subs.reduce((a, s) => a + s.quantity, 0)}</div>
             ) : (
               <input
-                type="number"
-                min="1"
-                value={draft.quantity}
+                type="number" min="1" value={draft.quantity}
                 onChange={e => updateDraft(draft.id, { quantity: Number(e.target.value) || 1 })}
                 style={qtyInput}
                 onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = 'var(--shadow-focus)' }}
@@ -599,24 +532,17 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
             </select>
           </td>
         </tr>
-        {/* Sub-item rows */}
-        {expanded && (
+        {expandedSubs && (
           <>
             {subs.map(sub => (
               <tr key={`sub-${sub.id}`} style={{ background: color ? color.bg : 'transparent' }}>
                 <td style={td}>
-                  <button
-                    style={{ ...btnGhost, color: 'var(--destructive)', padding: '0 8px', fontSize: '14px', lineHeight: 1 }}
-                    onClick={() => removeSubRow(draft.id, sub.id)}
-                    title="Remove sub-item"
-                  >×</button>
+                  <button style={{ ...btnGhost, color: 'var(--destructive)', padding: '0 8px', fontSize: '14px', lineHeight: 1 }} onClick={() => removeSubRow(draft.id, sub.id)} title="Remove sub-item">×</button>
                 </td>
                 <td style={{ ...td, paddingLeft: '20px' }}>
                   <input
                     data-sub-name={draft.id}
-                    type="text"
-                    value={sub.name}
-                    placeholder="Sub-item name"
+                    type="text" value={sub.name} placeholder="Sub-item name"
                     onChange={e => updateSubDraft(draft.id, sub.id, { name: e.target.value })}
                     onKeyDown={e => { if (e.key === 'Enter') addSubRow(draft.id) }}
                     style={{ ...cellInput(subNameErrors.has(sub.id)), fontSize: '12px', height: '30px', paddingLeft: '8px' }}
@@ -626,9 +552,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
                 </td>
                 <td style={{ ...td, textAlign: 'center' }}>
                   <input
-                    type="number"
-                    min="1"
-                    value={sub.quantity}
+                    type="number" min="1" value={sub.quantity}
                     onChange={e => updateSubDraft(draft.id, sub.id, { quantity: Number(e.target.value) || 1 })}
                     style={{ ...qtyInput, height: '30px', fontSize: '12px' }}
                     onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = 'var(--shadow-focus)' }}
@@ -639,11 +563,8 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
               </tr>
             ))}
             <tr style={{ background: color ? color.bg : 'transparent' }}>
-              <td />
-              <td colSpan={3} style={{ paddingLeft: '20px', paddingBottom: '4px' }}>
-                <button style={{ ...btnLink, fontSize: '12px', paddingLeft: '8px' }} onClick={() => addSubRow(draft.id)}>
-                  + Add sub-item
-                </button>
+              <td /><td colSpan={3} style={{ paddingLeft: '20px', paddingBottom: '4px' }}>
+                <button style={{ ...btnLink, fontSize: '12px', paddingLeft: '8px' }} onClick={() => addSubRow(draft.id)}>+ Add sub-item</button>
               </td>
             </tr>
           </>
@@ -652,16 +573,23 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
     )
   }
 
+  // ── Main render ────────────────────────────────────────────────────────────
+
+  const packed = serverItems.filter(i => i.packed).length
+  const isEmpty = serverItems.length === 0 && !editMode
+  const isGrouped = grouping.length > 0
+  const filterCatId = (columnFilters.find(f => f.id === 'category')?.value as number | 'all') ?? 'all'
+  const visibleDrafts = drafts.filter(d => !d.deleted)
+
   return (
     <div>
-      {/* Toolbar */}
       {serverItems.length > 0 && !editMode && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>{packed}/{serverItems.length} packed</span>
             <select
               value={filterCatId === 'all' ? 'all' : String(filterCatId)}
-              onChange={e => setFilterCatId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              onChange={e => setColumnFilters(e.target.value === 'all' ? [] : [{ id: 'category', value: Number(e.target.value) }])}
               style={{ ...catSelect, width: 'auto', minWidth: '100px', height: '26px', fontSize: '11px', padding: '0 6px' }}
             >
               <option value="all">All</option>
@@ -671,14 +599,12 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
             </select>
             <button
               style={{ ...btnSecondary, fontSize: '11px', height: '26px', padding: '0 8px' }}
-              onClick={() => setGroupMode(g => g === 'category' ? 'none' : 'category')}
+              onClick={() => setGrouping(g => g.length > 0 ? [] : ['category'])}
             >
-              {groupMode === 'category' ? 'Ungroup' : 'Group'}
+              {isGrouped ? 'Ungroup' : 'Group'}
             </button>
           </div>
-          <button style={{ ...btnPrimary, height: '26px', padding: '0 10px', fontSize: '12px' }} onClick={enterEdit}>
-            Edit
-          </button>
+          <button style={{ ...btnPrimary, height: '26px', padding: '0 10px', fontSize: '12px' }} onClick={enterEdit}>Edit</button>
         </div>
       )}
 
@@ -697,48 +623,58 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
               <col style={{ width: editMode ? '130px' : '110px' }} />
             </colgroup>
             <thead>
-              <tr>
-                <th style={th} />
-                <th style={{ ...th, cursor: 'pointer' }} onClick={() => toggleSort('name')}>
-                  Name {sortIcon('name')}
-                </th>
-                <th style={{ ...th, cursor: 'pointer', textAlign: 'center' }} onClick={() => toggleSort('quantity')}>
-                  Qty {sortIcon('quantity')}
-                </th>
-                <th style={{ ...th, cursor: 'pointer' }} onClick={() => toggleSort('category')}>
-                  Category {sortIcon('category')}
-                </th>
-              </tr>
+              {table.getHeaderGroups().map(hg => (
+                <tr key={hg.id}>
+                  {hg.headers.map(header => {
+                    const canSort = header.column.getCanSort()
+                    const sorted = header.column.getIsSorted()
+                    return (
+                      <th
+                        key={header.id}
+                        style={{ ...th, cursor: canSort ? 'pointer' : 'default', textAlign: header.id === 'quantity' ? 'center' : 'left' }}
+                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      >
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        {canSort && (sorted === 'asc' ? ' ↑' : sorted === 'desc' ? ' ↓' : ' ↕')}
+                      </th>
+                    )
+                  })}
+                </tr>
+              ))}
             </thead>
             <tbody>
               {editMode ? (
                 visibleDrafts.map((draft, idx) => renderEditItem(draft, idx))
-              ) : groupMode === 'category' ? (
-                groupByCategory(visibleItems).map(group => (
-                  <React.Fragment key={`g-${group.catId}`}>
-                    <tr>
-                      <td colSpan={4} style={{
-                        padding: '10px 12px 4px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: group.catId !== null ? catColor(group.catId)?.dot : 'var(--fg-muted)',
-                        borderBottom: `1px solid ${group.catId !== null ? (catColor(group.catId)?.dot + '30') : 'var(--border)'}`,
-                      }}>
-                        {group.catId !== null && (
-                          <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: catColor(group.catId)?.dot, marginRight: '6px', verticalAlign: 'middle' }} />
-                        )}
-                        {group.label}
-                      </td>
-                    </tr>
-                    {group.items.map(item => renderViewItem(item, group.catId !== null ? group.label : null))}
-                  </React.Fragment>
-                ))
               ) : (
-                visibleItems.map(item => {
-                  const catName = categories.find(c => c.id === item.category_id)?.name ?? null
-                  return renderViewItem(item, catName)
+                table.getRowModel().rows.map(row => {
+                  if (row.getIsGrouped()) {
+                    const catName = row.getValue<string>('category')
+                    const catId = categories.find(c => c.name === catName)?.id ?? null
+                    const color = catColor(catId)
+                    return (
+                      <React.Fragment key={row.id}>
+                        <tr>
+                          <td colSpan={4} style={{
+                            padding: '10px 12px 4px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
+                            color: color?.dot ?? 'var(--fg-muted)',
+                            borderBottom: `1px solid ${color ? color.dot + '30' : 'var(--border)'}`,
+                          }}>
+                            {color && <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: color.dot, marginRight: '6px', verticalAlign: 'middle' }} />}
+                            {catName}
+                          </td>
+                        </tr>
+                        {row.subRows.map(subRow => {
+                          const item = subRow.original
+                          return renderViewItem(item, catName !== 'Uncategorized' ? catName : null)
+                        })}
+                      </React.Fragment>
+                    )
+                  }
+                  return renderViewItem(row.original, categories.find(c => c.id === row.original.category_id)?.name ?? null)
                 })
               )}
             </tbody>
@@ -746,7 +682,6 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
         </div>
       )}
 
-      {/* Edit footer */}
       {editMode && (
         <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button style={btnLink} onClick={addRow}>+ Add row</button>

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Dialog } from '@/components/ui/dialog'
-import { api } from '@/lib/api'
+import { useCreateTrip } from '@/lib/queries'
 import { inputStyle, labelStyle, errorStyle, submitBtnStyle } from '@/app/(auth)/auth-layout'
 
 const schema = z.object({
@@ -16,22 +16,15 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-interface Trip {
-  id: number
-  name: string
-  is_active: boolean
-  start_date: string | null
-  end_date: string | null
-}
-
 interface Props {
   open: boolean
   onClose: () => void
-  onCreated: (trip: Trip) => void
+  onCreated: () => void
 }
 
 export function CreateTripModal({ open, onClose, onCreated }: Props) {
   const [error, setError] = useState<string | null>(null)
+  const createTrip = useCreateTrip()
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -40,8 +33,8 @@ export function CreateTripModal({ open, onClose, onCreated }: Props) {
   async function onSubmit(data: FormData) {
     setError(null)
     try {
-      const trip = await api.post<Trip>('/trips', data)
-      onCreated(trip)
+      await createTrip.mutateAsync(data)
+      onCreated()
       reset()
       onClose()
     } catch (e) {

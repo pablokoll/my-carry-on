@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { useAllBags, useDeleteBag, useDuplicateBag } from '@/lib/queries'
 import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 
@@ -43,39 +43,14 @@ function TypeBadge({ type }: { type: string }) {
 
 export default function BagsPage() {
   const router = useRouter()
-  const [bags, setBags] = useState<Bag[]>([])
-  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [confirmId, setConfirmId] = useState<number | null>(null)
-  const [duplicating, setDuplicating] = useState<number | null>(null)
 
-  useEffect(() => {
-    api.get<Bag[]>('/bags')
-      .then(setBags)
-      .finally(() => setLoading(false))
-  }, [])
+  const { data: bags = [], isLoading } = useAllBags()
+  const deleteBag = useDeleteBag()
+  const duplicateBag = useDuplicateBag()
 
-  async function handleDuplicate(id: number) {
-    setDuplicating(id)
-    try {
-      const newBag = await api.post<Bag>(`/bags/${id}/duplicate`, {})
-      setBags(prev => [...prev, newBag])
-    } catch { /* silent */ } finally {
-      setDuplicating(null)
-    }
-  }
-
-  async function handleDelete() {
-    if (confirmId === null) return
-    try {
-      await api.delete(`/bags/${confirmId}`)
-      setBags(prev => prev.filter(b => b.id !== confirmId))
-    } catch { /* silent */ } finally {
-      setConfirmId(null)
-    }
-  }
-
-  if (loading) {
+  if (isLoading) {
     return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
   }
 
@@ -93,7 +68,7 @@ export default function BagsPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {bags.map(bag => (
+          {bags.map((bag: Bag) => (
             <div key={bag.id} style={{
               background: 'var(--bg-surface)',
               borderRadius: '8px',
@@ -112,10 +87,10 @@ export default function BagsPage() {
               <div style={{ display: 'flex', gap: '4px' }} onClick={e => e.stopPropagation()}>
                 <button
                   style={{ ...btnDestructive, color: 'var(--fg-muted)' }}
-                  disabled={duplicating === bag.id}
-                  onClick={() => handleDuplicate(bag.id)}
+                  disabled={duplicateBag.isPending && duplicateBag.variables === bag.id}
+                  onClick={() => duplicateBag.mutate(bag.id)}
                 >
-                  {duplicating === bag.id ? '…' : 'Duplicate'}
+                  {duplicateBag.isPending && duplicateBag.variables === bag.id ? '…' : 'Duplicate'}
                 </button>
                 <button style={btnDestructive} onClick={() => setConfirmId(bag.id)}>Delete</button>
               </div>
@@ -127,7 +102,7 @@ export default function BagsPage() {
       <CreateBagModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        onCreated={bag => setBags(prev => [bag, ...prev])}
+        onCreated={() => setModalOpen(false)}
       />
 
       <ConfirmModal
@@ -135,7 +110,7 @@ export default function BagsPage() {
         title="Delete bag?"
         description="This cannot be undone."
         confirmLabel="Delete"
-        onConfirm={handleDelete}
+        onConfirm={() => { if (confirmId !== null) deleteBag.mutate(confirmId); setConfirmId(null) }}
         onCancel={() => setConfirmId(null)}
       />
     </>
