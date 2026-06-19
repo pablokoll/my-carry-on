@@ -2,8 +2,8 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
 from errors import BadRequest, NotFound
-from extensions import get_current_user_id
-from models import Trip
+from extensions import db, get_current_user_id
+from models import ChatMessage, ChatSession, Trip
 from services.chat_service import (
     MODEL,
     COMPACT_THRESHOLD,
@@ -11,6 +11,7 @@ from services.chat_service import (
     build_gemini_history,
     build_system_prompt,
     compact_history,
+    generate_session_title,
     get_history,
     parse_reply,
     save_messages,
@@ -20,17 +21,111 @@ from services.chat_service import (
 chat_bp = Blueprint("chat", __name__)
 
 
+# --- Session endpoints ---
 
-@chat_bp.route("/chat/<int:trip_id>", methods=["GET"])
+@chat_bp.route("/chat/sessions", methods=["GET"])
 @jwt_required()
-def get_chat_history(trip_id):
+def list_sessions():
     user_id = get_current_user_id()
+    trip_id = request.args.get("trip_id", type=int)
+    if not trip_id:
+        raise BadRequest("trip_id is required")
+
     trip = Trip.query.get(trip_id)
     if not trip or trip.user_id != user_id:
         raise NotFound("Trip not found")
-    history = get_history(trip_id, user_id)
-    return jsonify([m.to_dict() for m in history]), 200
 
+    sessions = (
+        ChatSession.query
+        .filter_by(trip_id=trip_id, user_id=user_id)
+        .order_by(ChatSession.created_at.desc())
+        .all()
+    )
+
+    result = []
+    for s in sessions:
+        msg_count = ChatMessage.query.filter_by(session_id=s.id).filter(
+            ChatMessage.role != "summary"
+        ).count()
+        result.append({
+            "id": s.id,
+            "title": s.title,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "message_count": msg_count,
+        })
+
+    return jsonify(result), 200
+
+
+@chat_bp.route("/chat/sessions", methods=["POST"])
+@jwt_required()
+def create_session():
+    user_id = get_current_user_id()
+    data = request.get_json()
+    if not data:
+        raise BadRequest("No data provided")
+
+    trip_id = data.get("trip_id")
+    if not trip_id:
+        raise BadRequest("trip_id is required")
+
+    trip = Trip.query.get(trip_id)
+    if not trip or trip.user_id != user_id:
+        raise NotFound("Trip not found")
+
+    session = ChatSession(trip_id=trip_id, user_id=user_id)
+    db.session.add(session)
+    db.session.commit()
+
+    return jsonify(session.to_dict()), 201
+
+
+@chat_bp.route("/chat/sessions/<int:session_id>", methods=["DELETE"])
+@jwt_required()
+def delete_session(session_id):
+    user_id = get_current_user_id()
+    session = ChatSession.query.get(session_id)
+    if not session or session.user_id != user_id:
+        raise NotFound("Session not found")
+
+    db.session.delete(session)
+    db.session.commit()
+    return jsonify({"ok": True}), 200
+
+
+@chat_bp.route("/chat/sessions/<int:session_id>/messages", methods=["DELETE"])
+@jwt_required()
+def clear_session_messages(session_id):
+    user_id = get_current_user_id()
+    session = ChatSession.query.get(session_id)
+    if not session or session.user_id != user_id:
+        raise NotFound("Session not found")
+
+    ChatMessage.query.filter_by(session_id=session_id).delete()
+    session.title = None
+    db.session.commit()
+    return jsonify({"ok": True}), 200
+
+
+@chat_bp.route("/chat/sessions/<int:session_id>/messages", methods=["GET"])
+@jwt_required()
+def get_session_messages(session_id):
+    user_id = get_current_user_id()
+    session = ChatSession.query.get(session_id)
+    if not session or session.user_id != user_id:
+        raise NotFound("Session not found")
+
+    messages = (
+        ChatMessage.query
+        .filter_by(session_id=session_id, user_id=user_id)
+        .filter(ChatMessage.role != "summary")
+        .order_by(ChatMessage.created_at.asc())
+        .all()
+    )
+    return jsonify([m.to_dict() for m in messages]), 200
+
+
+# --- Chat endpoint ---
 
 @chat_bp.route("/chat", methods=["POST"])
 @jwt_required()
@@ -40,24 +135,25 @@ def chat():
     if not data:
         raise BadRequest("No data provided")
 
-    trip_id = data.get("trip_id")
+    session_id = data.get("session_id")
     messages = data.get("messages")
-    if not trip_id:
-        raise BadRequest("trip_id is required")
+    if not session_id:
+        raise BadRequest("session_id is required")
     if not messages or not isinstance(messages, list):
         raise BadRequest("messages is required")
 
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
+    session = ChatSession.query.get(session_id)
+    if not session or session.user_id != user_id:
+        raise NotFound("Session not found")
 
+    trip = session.trip
     system_prompt = build_system_prompt(trip)
-    db_history = get_history(trip_id, user_id)
+    db_history = get_history(session_id, user_id)
 
     non_summary = [m for m in db_history if m.role != "summary"]
     if len(non_summary) >= COMPACT_THRESHOLD:
-        compact_history(trip_id, user_id, db_history)
-        db_history = get_history(trip_id, user_id)
+        compact_history(session_id, user_id, db_history)
+        db_history = get_history(session_id, user_id)
 
     gemini_history = build_gemini_history(db_history, system_prompt)
     user_message = messages[-1]["content"]
@@ -82,25 +178,44 @@ def chat():
     raw = response.text or response.candidates[0].content.parts[0].text
     reply, suggestions = parse_reply(raw)
 
-    save_messages(trip_id, user_id, user_message, reply)
-    return jsonify({
+    is_first_exchange = len(non_summary) == 0
+    save_messages(session_id, user_id, user_message, reply)
+
+    session_title = None
+    if is_first_exchange and session.title is None:
+        session_title = generate_session_title(user_message, reply)
+        session.title = session_title
+        db.session.commit()
+
+    updated_history = get_history(session_id, user_id)
+    filtered_history = [m.to_dict() for m in updated_history if m.role != "summary"]
+
+    response_data = {
         "reply": reply,
         "suggestions": suggestions,
-        "history": [m.to_dict() for m in get_history(trip_id, user_id)],
-    }), 200
+        "history": filtered_history,
+    }
+    if session_title is not None:
+        response_data["session_title"] = session_title
 
+    return jsonify(response_data), 200
+
+
+# --- Log endpoint ---
 
 @chat_bp.route("/chat/log", methods=["POST"])
 @jwt_required()
 def log_context():
     user_id = get_current_user_id()
     data = request.get_json()
-    trip_id = data.get("trip_id")
+    session_id = data.get("session_id")
     content = data.get("content")
-    if not trip_id or not content:
-        raise BadRequest("trip_id and content are required")
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
-    save_context_message(trip_id, user_id, content)
+    if not session_id or not content:
+        raise BadRequest("session_id and content are required")
+
+    session = ChatSession.query.get(session_id)
+    if not session or session.user_id != user_id:
+        raise NotFound("Session not found")
+
+    save_context_message(session_id, user_id, content)
     return jsonify({"ok": True}), 200

@@ -7,7 +7,7 @@ import requests
 from google import genai
 
 from extensions import db
-from models import ChatMessage, Trip
+from models import ChatMessage, ChatSession, Trip
 
 _client = genai.Client(api_key=os.environ.get("API_KEY_AI_GOOGLE_STUDIO"))
 MODEL = "gemini-2.5-flash-lite"
@@ -203,16 +203,16 @@ def parse_reply(raw: str) -> tuple[str, list[dict]]:
     return text, suggestions
 
 
-def get_history(trip_id: int, user_id: int) -> list[ChatMessage]:
+def get_history(session_id: int, user_id: int) -> list[ChatMessage]:
     return (
         ChatMessage.query
-        .filter_by(trip_id=trip_id, user_id=user_id)
+        .filter_by(session_id=session_id, user_id=user_id)
         .order_by(ChatMessage.created_at.asc())
         .all()
     )
 
 
-def compact_history(trip_id: int, user_id: int, messages: list[ChatMessage]) -> None:
+def compact_history(session_id: int, user_id: int, messages: list[ChatMessage]) -> None:
     non_summary = [m for m in messages if m.role != "summary"]
     to_compact = non_summary[:-MESSAGES_KEPT_AFTER_COMPACT]
     if not to_compact:
@@ -226,7 +226,7 @@ def compact_history(trip_id: int, user_id: int, messages: list[ChatMessage]) -> 
     ).text
 
     summary = ChatMessage(
-        trip_id=trip_id,
+        session_id=session_id,
         user_id=user_id,
         role="summary",
         content=summary_text,
@@ -265,16 +265,29 @@ def build_gemini_history(messages: list[ChatMessage], system_prompt: str) -> lis
     return history
 
 
-def save_messages(trip_id: int, user_id: int, user_content: str, model_content: str) -> None:
+def save_messages(session_id: int, user_id: int, user_content: str, model_content: str) -> None:
     now = datetime.now(timezone.utc)
-    db.session.add(ChatMessage(trip_id=trip_id, user_id=user_id, role="user", content=user_content, created_at=now))
-    db.session.add(ChatMessage(trip_id=trip_id, user_id=user_id, role="model", content=model_content, created_at=now))
+    db.session.add(ChatMessage(session_id=session_id, user_id=user_id, role="user", content=user_content, created_at=now))
+    db.session.add(ChatMessage(session_id=session_id, user_id=user_id, role="model", content=model_content, created_at=now))
     db.session.commit()
 
 
-def save_context_message(trip_id: int, user_id: int, content: str) -> None:
+def save_context_message(session_id: int, user_id: int, content: str) -> None:
     db.session.add(ChatMessage(
-        trip_id=trip_id, user_id=user_id, role="user",
+        session_id=session_id, user_id=user_id, role="user",
         content=content, created_at=datetime.now(timezone.utc),
     ))
     db.session.commit()
+
+
+def generate_session_title(first_user_msg: str, first_model_reply: str) -> str:
+    prompt = (
+        f"Generate a short title (3-5 words) for a packing assistant conversation "
+        f"that started with: '{first_user_msg}'. "
+        f"Reply with only the title, no quotes."
+    )
+    try:
+        result = _client.models.generate_content(model=MODEL, contents=prompt)
+        return result.text.strip()
+    except Exception:
+        return "Packing Session"
