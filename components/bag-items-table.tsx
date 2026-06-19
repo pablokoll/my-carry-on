@@ -333,7 +333,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
       const toCreate = drafts.filter(d => d.id < 0 && !d.deleted)
       const toUpdate = drafts.filter(d => d.id > 0 && !d.deleted).filter(d => {
         const orig = serverItems.find(i => i.id === d.id)
-        return orig && (orig.name !== d.name || orig.category_id !== d.category_id)
+        return orig && (orig.name !== d.name || orig.category_id !== d.category_id || orig.quantity !== d.quantity)
       })
       const toDelete = drafts.filter(d => d.id > 0 && d.deleted)
 
@@ -348,6 +348,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
         Promise.all(toUpdate.map(d =>
           api.put<Item>(`/items/${d.id}`, {
             name: d.name.trim(),
+            quantity: d.quantity,
             category_id: d.category_id,
           })
         )),

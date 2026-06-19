@@ -119,6 +119,7 @@ export default function TripPage() {
   const [bagItems, setBagItems] = useState<Record<number, Item[]>>({})
   const [categories, setCategories] = useState<Category[]>([])
   const [expandedBags, setExpandedBags] = useState<Set<number>>(new Set())
+  const [bagReloadKey, setBagReloadKey] = useState(0)
   // kebab menu
   const [menuOpen, setMenuOpen] = useState(false)
   // confirm modals
@@ -153,6 +154,22 @@ export default function TripPage() {
         setBagItems(itemsMap)
       })
   }, [id, router])
+
+  // Reload bags when chat assistant adds items or creates bags
+  useEffect(() => {
+    function reloadBags() {
+      api.get<(Bag & { items: Item[] })[]>(`/trips/${id}/bags`).then(bags => {
+        setAssignedBags(bags.map(b => ({ id: b.id, name: b.name, type: b.type })))
+        const itemsMap: Record<number, Item[]> = {}
+        bags.forEach(b => { itemsMap[b.id] = b.items ?? [] })
+        setBagItems(itemsMap)
+        setBagReloadKey(k => k + 1)
+      })
+      api.get<Bag[]>('/bags').then(setAllBags)
+    }
+    window.addEventListener('chat:bag-mutated', reloadBags)
+    return () => window.removeEventListener('chat:bag-mutated', reloadBags)
+  }, [id])
 
   // --- edit trip ---
   function openEdit() {
@@ -449,6 +466,7 @@ export default function TripPage() {
                   {expanded && (
                     <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px' }}>
                       <BagItemsTable
+                        key={bagReloadKey}
                         bagId={bag.id}
                         initialItems={bagItems[bag.id] ?? []}
                         categories={categories}

@@ -28,6 +28,40 @@ interface ApiError extends Error {
   error?: string
 }
 
+interface Category {
+  id: number
+  name: string
+}
+
+interface SuggestionAddItem {
+  type: 'add_item'
+  name: string
+  bag_id: number
+  bag_name: string
+  category?: string
+  quantity?: number
+}
+
+interface SuggestionAddSubItem {
+  type: 'add_sub_item'
+  item_id: number
+  item_name: string
+  bag_id: number
+  bag_name: string
+  new_sub_item: { name: string; quantity: number }
+  also_convert_original?: boolean
+  original_name?: string
+}
+
+interface SuggestionCreateBag {
+  type: 'create_bag'
+  name: string
+  bag_type: string
+  items: string[]
+}
+
+type Suggestion = SuggestionAddItem | SuggestionAddSubItem | SuggestionCreateBag
+
 function useCountdown(seconds: number, onDone: () => void) {
   const [remaining, setRemaining] = useState(seconds)
   useEffect(() => {
@@ -134,31 +168,147 @@ function TripSelector({ trips, onSelect }: { trips: Trip[]; onSelect: (t: Trip) 
   )
 }
 
+// ─── Suggestion cards ──────────────────────────────────────────────────────
+
+function suggestionKey(s: Suggestion) {
+  if (s.type === 'add_item') return `add_item:${s.name}:${s.bag_id}:${s.quantity ?? 1}`
+  if (s.type === 'add_sub_item') return `add_sub_item:${s.item_id}:${s.new_sub_item.name}`
+  return `create_bag:${s.name}`
+}
+
+function SuggestionCards({
+  suggestions,
+  onAccept,
+  onDecline,
+  accepting,
+}: {
+  suggestions: Suggestion[]
+  onAccept: (s: Suggestion) => void
+  onDecline: (s: Suggestion) => void
+  accepting: string | null
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
+      {suggestions.map((s) => {
+        const key = suggestionKey(s)
+        const isAccepting = accepting === key
+        const isDisabled = accepting !== null
+        const isCreateBag = s.type === 'create_bag'
+        const isSubItem = s.type === 'add_sub_item'
+
+        return (
+          <div
+            key={key}
+            style={{
+              background: 'var(--card)',
+              border: `1px solid ${isCreateBag ? 'rgba(74,123,181,0.3)' : isSubItem ? 'rgba(120,180,120,0.35)' : 'var(--border)'}`,
+              borderRadius: '10px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <div style={{ minWidth: 0 }}>
+                {isCreateBag ? (
+                  <>
+                    <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '6px' }}>New bag</span>
+                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{s.name}</span>
+                    <span style={{ color: 'var(--fg-muted)', fontSize: '11px', marginLeft: '6px' }}>{s.bag_type}</span>
+                  </>
+                ) : isSubItem ? (
+                  <>
+                    <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgb(80,150,80)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '6px' }}>Variant</span>
+                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{s.item_name}</span>
+                    <span style={{ color: 'var(--fg-muted)', fontSize: '11px', marginLeft: '4px' }}>+ {s.new_sub_item.name}</span>
+                    <span style={{ color: 'var(--fg-muted)', fontSize: '11px', marginLeft: '6px' }}>→ {s.bag_name}</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{s.name}</span>
+                    {(s.quantity ?? 1) > 1 && (
+                      <span style={{ color: 'var(--fg-muted)', fontSize: '11px', marginLeft: '4px' }}>x{s.quantity}</span>
+                    )}
+                    <span style={{ color: 'var(--fg-muted)', fontSize: '11px', marginLeft: '6px' }}>→ {s.bag_name}</span>
+                  </>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                <button
+                  onClick={() => onAccept(s)}
+                  disabled={isDisabled}
+                  style={{
+                    background: 'var(--primary)',
+                    color: 'var(--primary-foreground)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                    opacity: isDisabled && !isAccepting ? 0.5 : 1,
+                    fontWeight: 500,
+                  }}
+                >
+                  {isAccepting ? '…' : isCreateBag ? 'Create' : 'Add'}
+                </button>
+
+                <button
+                  onClick={() => onDecline(s)}
+                  disabled={isDisabled}
+                  style={{
+                    background: 'transparent',
+                    color: 'var(--fg-muted)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                    opacity: isDisabled ? 0.5 : 1,
+                  }}
+                >✕</button>
+              </div>
+            </div>
+            {isCreateBag && s.items.length > 0 && (
+              <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '11px', color: 'var(--fg-muted)' }}>
+                  {s.items.join(' · ')}
+                </span>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Chat panel ────────────────────────────────────────────────────────────
 
-function ChatPanel({ trip, onBack }: { trip: Trip; onBack: () => void }) {
+function ChatPanel({ trip, categories, onBack }: { trip: Trip; categories: Category[]; onBack: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [rateLimitSeconds, setRateLimitSeconds] = useState(0)
   const [historyLoaded, setHistoryLoaded] = useState(false)
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [accepting, setAccepting] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const countdown = useCountdown(rateLimitSeconds, () => setRateLimitSeconds(0))
-  const blocked = countdown > 0
+  const blocked = countdown > 0 || suggestions.length > 0
 
   useEffect(() => {
     setMessages([])
+    setSuggestions([])
     setHistoryLoaded(false)
     api.get<ChatMessage[]>(`/chat/${trip.id}`)
-      .then(h => setMessages(h.filter(m => m.role !== 'summary')))
+      .then(h => setMessages(h.filter(m => m.role !== 'summary' && !m.content.startsWith('[system:'))))
       .catch(() => {})
       .finally(() => setHistoryLoaded(true))
   }, [trip.id])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
+  }, [messages, loading, suggestions])
 
   async function handleSend() {
     const text = input.trim()
@@ -168,11 +318,18 @@ function ChatPanel({ trip, onBack }: { trip: Trip; onBack: () => void }) {
     const optimistic: ChatMessage = { id: Date.now(), role: 'user', content: text, created_at: new Date().toISOString() }
     setMessages(prev => [...prev, optimistic])
     try {
-      const data = await api.post<{ reply: string; history: ChatMessage[] }>(
+      const data = await api.post<{ reply: string; suggestions: Suggestion[]; history: ChatMessage[] }>(
         '/chat',
         { trip_id: trip.id, messages: [{ role: 'user', content: text }] },
       )
       setMessages(data.history.filter(m => m.role !== 'summary'))
+      const seen = new Set<string>()
+      setSuggestions((data.suggestions ?? []).filter(s => {
+        const k = suggestionKey(s)
+        if (seen.has(k)) return false
+        seen.add(k)
+        return true
+      }))
     } catch (e) {
       const err = e as ApiError
       setMessages(prev => prev.filter(m => m.id !== optimistic.id))
@@ -180,6 +337,55 @@ function ChatPanel({ trip, onBack }: { trip: Trip; onBack: () => void }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  function resolveCategory(name?: string): number | undefined {
+    if (!name) return undefined
+    return categories.find(c => c.name.toLowerCase() === name.toLowerCase())?.id
+  }
+
+  async function handleAccept(s: Suggestion) {
+    const key = suggestionKey(s)
+    setAccepting(key)
+    try {
+      let confirmation = ''
+      if (s.type === 'add_item') {
+        await api.post(`/bags/${s.bag_id}/items`, {
+          name: s.name,
+          quantity: s.quantity ?? 1,
+          category_id: resolveCategory(s.category) ?? null,
+        })
+        confirmation = `[system: user accepted — added "${s.name}" (qty ${s.quantity ?? 1}) to bag "${s.bag_name}"]`
+      } else if (s.type === 'add_sub_item') {
+        if (s.also_convert_original && s.original_name) {
+          // Rename existing item to generic name, then add original as first sub-item
+          await api.put(`/items/${s.item_id}`, { name: s.item_name })
+          await api.post(`/items/${s.item_id}/sub-items`, { name: s.original_name, quantity: 1 })
+        }
+        await api.post(`/items/${s.item_id}/sub-items`, {
+          name: s.new_sub_item.name,
+          quantity: s.new_sub_item.quantity,
+        })
+        confirmation = `[system: user accepted — added variant "${s.new_sub_item.name}" to item "${s.item_name}" in bag "${s.bag_name}"]`
+      } else {
+        const bag = await api.post<{ id: number }>('/bags', { name: s.name, type: s.bag_type })
+        await api.post(`/trips/${trip.id}/bags`, { bag_id: bag.id })
+        if (s.items.length > 0) {
+          await Promise.all(s.items.map(name => api.post(`/bags/${bag.id}/items`, { name, quantity: 1 })))
+        }
+        confirmation = `[system: user accepted — created bag "${s.name}" (${s.bag_type}) with items: ${s.items.join(', ')}]`
+      }
+      setSuggestions(prev => prev.filter(p => suggestionKey(p) !== key))
+      setTimeout(() => window.dispatchEvent(new CustomEvent('chat:bag-mutated')), 100)
+      api.post('/chat/log', { trip_id: trip.id, content: confirmation }).catch(() => {})
+    } catch { /* silent */ } finally {
+      setAccepting(null)
+    }
+  }
+
+  function handleDecline(s: Suggestion) {
+    const key = suggestionKey(s)
+    setSuggestions(prev => prev.filter(p => suggestionKey(p) !== key))
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -218,11 +424,19 @@ function ChatPanel({ trip, onBack }: { trip: Trip; onBack: () => void }) {
             <div style={{ background: 'var(--bg-surface)', borderRadius: '16px 16px 16px 4px', padding: '10px 16px', fontSize: '18px', color: 'var(--fg-muted)', letterSpacing: '3px' }}>···</div>
           </div>
         )}
+        {suggestions.length > 0 && (
+          <SuggestionCards
+            suggestions={suggestions}
+            onAccept={handleAccept}
+            onDecline={handleDecline}
+            accepting={accepting}
+          />
+        )}
         <div ref={bottomRef} />
       </div>
 
       {/* Rate limit banner */}
-      {blocked && (
+      {countdown > 0 && (
         <div style={{
           background: 'rgba(232,48,74,0.08)',
           border: '1px solid rgba(232,48,74,0.2)',
@@ -239,6 +453,13 @@ function ChatPanel({ trip, onBack }: { trip: Trip; onBack: () => void }) {
           <span>Límite alcanzado. Podés continuar en</span>
           <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatTime(countdown)}</span>
         </div>
+      )}
+
+      {/* Suggestions blocking hint */}
+      {suggestions.length > 0 && (
+        <p style={{ fontSize: '11px', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 6px', flexShrink: 0 }}>
+          Respondé las sugerencias para continuar
+        </p>
       )}
 
       {/* Input */}
@@ -299,10 +520,12 @@ export function ChatWindow() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [tripsLoaded, setTripsLoaded] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
 
-  // Load trips once on mount
+  // Load trips + categories once on mount
   useEffect(() => {
     api.get<Trip[]>('/trips').then(t => { setTrips(t); setTripsLoaded(true) }).catch(() => setTripsLoaded(true))
+    api.get<Category[]>('/categories').then(setCategories).catch(() => {})
   }, [])
 
   // Pre-select trip when opening based on current route
@@ -424,7 +647,7 @@ export function ChatWindow() {
             ) : !selectedTrip ? (
               <TripSelector trips={trips} onSelect={setSelectedTrip} />
             ) : (
-              <ChatPanel trip={selectedTrip} onBack={() => setSelectedTrip(null)} />
+              <ChatPanel trip={selectedTrip} categories={categories} onBack={() => setSelectedTrip(null)} />
             )}
           </div>
         </div>

@@ -12,7 +12,9 @@ from services.chat_service import (
     build_system_prompt,
     compact_history,
     get_history,
+    parse_reply,
     save_messages,
+    save_context_message,
 )
 
 chat_bp = Blueprint("chat", __name__)
@@ -77,7 +79,28 @@ def chat():
             }), 429
         raise
 
-    reply = response.text or response.candidates[0].content.parts[0].text
+    raw = response.text or response.candidates[0].content.parts[0].text
+    reply, suggestions = parse_reply(raw)
 
     save_messages(trip_id, user_id, user_message, reply)
-    return jsonify({"reply": reply, "history": [m.to_dict() for m in get_history(trip_id, user_id)]}), 200
+    return jsonify({
+        "reply": reply,
+        "suggestions": suggestions,
+        "history": [m.to_dict() for m in get_history(trip_id, user_id)],
+    }), 200
+
+
+@chat_bp.route("/chat/log", methods=["POST"])
+@jwt_required()
+def log_context():
+    user_id = get_current_user_id()
+    data = request.get_json()
+    trip_id = data.get("trip_id")
+    content = data.get("content")
+    if not trip_id or not content:
+        raise BadRequest("trip_id and content are required")
+    trip = Trip.query.get(trip_id)
+    if not trip or trip.user_id != user_id:
+        raise NotFound("Trip not found")
+    save_context_message(trip_id, user_id, content)
+    return jsonify({"ok": True}), 200

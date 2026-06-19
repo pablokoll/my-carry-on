@@ -10,7 +10,7 @@ export interface Bag {
   type: string;
 }
 
-const BAG_TYPES = ["carry-on", "luggage", "backpack", "worn", "other"] as const;
+const BAG_TYPES = ["carry-on", "luggage", "backpack", "handbag", "toiletry bag", "worn", "other"] as const;
 
 interface Props {
   open: boolean;
