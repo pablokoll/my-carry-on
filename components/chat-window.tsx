@@ -808,8 +808,12 @@ function ChatPanel({
         confirmation = `[system: user accepted — created bag "${s.name}" (${s.bag_type}) with items: ${s.items.join(", ")}]`;
       }
       setSuggestions((prev) => prev.filter((p) => suggestionKey(p) !== key));
+      const mutatedBagId =
+        s.type === "add_item" ? s.bag_id
+        : s.type === "add_sub_item" ? s.bag_id
+        : null;
       setTimeout(
-        () => window.dispatchEvent(new CustomEvent("chat:bag-mutated")),
+        () => window.dispatchEvent(new CustomEvent("chat:bag-mutated", { detail: { bag_id: mutatedBagId } })),
         100,
       );
       api

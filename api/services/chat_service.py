@@ -14,11 +14,18 @@ MODEL = "gemini-2.5-flash-lite"
 
 OWM_API_KEY = os.environ.get("API_KEY_OPEN_WEATHER_MAP")
 
+_weather_cache: dict[str, tuple[str, datetime]] = {}
+_WEATHER_TTL_SECONDS = 1800
+
 COMPACT_THRESHOLD = 30
 MESSAGES_KEPT_AFTER_COMPACT = 10
 
 
 def get_weather(city: str) -> str:
+    now = datetime.now(timezone.utc)
+    cached = _weather_cache.get(city)
+    if cached and (now - cached[1]).total_seconds() < _WEATHER_TTL_SECONDS:
+        return cached[0]
     try:
         r = requests.get(
             "https://api.openweathermap.org/data/2.5/weather",
@@ -34,17 +41,25 @@ def get_weather(city: str) -> str:
         d = r.json()
         desc = d["weather"][0]["description"]
         temp = d["main"]["temp"]
-        return f"{desc}, {temp:.0f}°C"
+        result = f"{desc}, {temp:.0f}°C"
+        _weather_cache[city] = (result, now)
+        return result
     except Exception:
         return "weather unavailable"
 
 
+_categories_cache: list[str] | None = None
+
 def get_categories() -> list[str]:
+    global _categories_cache
+    if _categories_cache is not None:
+        return _categories_cache
     from models import Category
     cats = Category.query.filter(
         (Category.user_id == None) | (Category.is_default == True)  # noqa: E711
     ).all()
-    return [c.name for c in cats]
+    _categories_cache = [c.name for c in cats]
+    return _categories_cache
 
 
 def build_system_prompt(trip: Trip) -> str:

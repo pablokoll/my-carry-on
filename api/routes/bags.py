@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
+from sqlalchemy.orm import selectinload
 from errors import BadRequest, Conflict, NotFound
 from extensions import db, get_current_user_id
 from models import Bag, Item, SubItem, Trip, TripBag
@@ -35,7 +36,11 @@ def create_bag():
 @jwt_required()
 def get_bag(bag_id):
     user_id = get_current_user_id()
-    bag = Bag.query.get(bag_id)
+    bag = (
+        Bag.query
+        .options(selectinload(Bag.items).selectinload(Item.sub_items))
+        .get(bag_id)
+    )
     if not bag or bag.user_id != user_id:
         raise NotFound("Bag not found")
 
@@ -114,7 +119,16 @@ def delete_bag(bag_id):
 @jwt_required()
 def get_trip_bags(trip_id):
     user_id = get_current_user_id()
-    trip = Trip.query.get(trip_id)
+    trip = (
+        Trip.query
+        .options(
+            selectinload(Trip.trip_bags)
+            .selectinload(TripBag.bag)
+            .selectinload(Bag.items)
+            .selectinload(Item.sub_items)
+        )
+        .get(trip_id)
+    )
     if not trip or trip.user_id != user_id:
         raise NotFound("Trip not found")
 

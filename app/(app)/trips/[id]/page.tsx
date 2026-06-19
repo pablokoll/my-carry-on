@@ -157,15 +157,23 @@ export default function TripPage() {
 
   // Reload bags when chat assistant adds items or creates bags
   useEffect(() => {
-    function reloadBags() {
-      api.get<(Bag & { items: Item[] })[]>(`/trips/${id}/bags`).then(bags => {
-        setAssignedBags(bags.map(b => ({ id: b.id, name: b.name, type: b.type })))
-        const itemsMap: Record<number, Item[]> = {}
-        bags.forEach(b => { itemsMap[b.id] = b.items ?? [] })
-        setBagItems(itemsMap)
-        setBagReloadKey(k => k + 1)
-      })
-      api.get<Bag[]>('/bags').then(setAllBags)
+    function reloadBags(e: Event) {
+      const bagId = (e as CustomEvent<{ bag_id: number | null }>).detail?.bag_id
+      if (bagId != null) {
+        api.get<Bag & { items: Item[] }>(`/bags/${bagId}`).then(bag => {
+          setBagItems(prev => ({ ...prev, [bag.id]: bag.items ?? [] }))
+          setBagReloadKey(k => k + 1)
+        })
+      } else {
+        api.get<(Bag & { items: Item[] })[]>(`/trips/${id}/bags`).then(bags => {
+          setAssignedBags(bags.map(b => ({ id: b.id, name: b.name, type: b.type })))
+          const itemsMap: Record<number, Item[]> = {}
+          bags.forEach(b => { itemsMap[b.id] = b.items ?? [] })
+          setBagItems(itemsMap)
+          setBagReloadKey(k => k + 1)
+        })
+        api.get<Bag[]>('/bags').then(setAllBags)
+      }
     }
     window.addEventListener('chat:bag-mutated', reloadBags)
     return () => window.removeEventListener('chat:bag-mutated', reloadBags)

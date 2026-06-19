@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
+from sqlalchemy.orm import selectinload
 from errors import BadRequest, NotFound
 from extensions import db, get_current_user_id
-from models import Trip
+from models import Bag, Item, Trip, TripBag
 
 trips_bp = Blueprint("trips", __name__)
 
@@ -12,7 +13,17 @@ trips_bp = Blueprint("trips", __name__)
 def get_trips():
     user_id = get_current_user_id()
     limit = request.args.get("limit", type=int)
-    query = Trip.query.filter_by(user_id=user_id).order_by(Trip.is_active.desc(), Trip.start_date.desc())
+    query = (
+        Trip.query
+        .filter_by(user_id=user_id)
+        .order_by(Trip.is_active.desc(), Trip.start_date.desc())
+        .options(
+            selectinload(Trip.trip_bags)
+            .selectinload(TripBag.bag)
+            .selectinload(Bag.items)
+            .selectinload(Item.sub_items)
+        )
+    )
     trips = query.limit(limit).all() if limit else query.all()
     result = []
     for trip in trips:

@@ -41,12 +41,15 @@ class Item(BaseModel):
     category = db.relationship("Category", back_populates="items")
     sub_items = db.relationship("SubItem", back_populates="item", lazy=True, cascade="all, delete-orphan")
 
-    def to_dict(self):
+    def to_dict(self, include_subs: bool = True):
         d = super().to_dict()
-        subs = self.sub_items
-        d["sub_items"] = [s.to_dict() for s in subs]
-        if subs:
-            d["quantity"] = sum(s.quantity or 1 for s in subs)
+        if include_subs:
+            subs = self.sub_items
+            d["sub_items"] = [s.to_dict() for s in subs]
+            if subs:
+                d["quantity"] = sum(s.quantity or 1 for s in subs)
+        else:
+            d["sub_items"] = []
         return d
 
 
