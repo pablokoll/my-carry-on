@@ -31,6 +31,10 @@ def create_destination(trip_id):
         raise BadRequest("city is required")
     if not data.get("country"):
         raise BadRequest("country is required")
+    if len(data["city"]) > 255:
+        raise BadRequest("city must be 255 characters or less")
+    if len(data["country"]) > 255:
+        raise BadRequest("country must be 255 characters or less")
 
     destination = Destination(
         trip_id=trip_id,

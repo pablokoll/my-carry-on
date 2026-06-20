@@ -29,12 +29,17 @@ def create_item(bag_id):
     data = request.get_json()
     if not data or not data.get("name"):
         raise BadRequest("name is required")
+    if len(data["name"]) > 255:
+        raise BadRequest("name must be 255 characters or less")
+    quantity = data.get("quantity", 1)
+    if not isinstance(quantity, int) or quantity < 1:
+        raise BadRequest("quantity must be a positive integer")
 
     item = Item(
         bag_id=bag_id,
         name=data["name"],
         category_id=data.get("category_id"),
-        quantity=data.get("quantity", 1),
+        quantity=quantity,
     )
     db.session.add(item)
     db.session.commit()
@@ -53,10 +58,20 @@ def update_item(item_id):
     if not item or item.bag.user_id != user_id:
         raise NotFound("Item not found")
 
-    item.name = data.get("name") or item.name
-    item.category_id = data.get("category_id") if "category_id" in data else item.category_id
-    item.quantity = data.get("quantity") or item.quantity
-    item.packed = data.get("packed") if "packed" in data else item.packed
+    new_name = data.get("name")
+    if new_name is not None:
+        if not new_name or len(new_name) > 255:
+            raise BadRequest("name must be between 1 and 255 characters")
+        item.name = new_name
+    if "category_id" in data:
+        item.category_id = data["category_id"]
+    if "quantity" in data:
+        qty = data["quantity"]
+        if not isinstance(qty, int) or qty < 1:
+            raise BadRequest("quantity must be a positive integer")
+        item.quantity = qty
+    if "packed" in data:
+        item.packed = data["packed"]
     db.session.commit()
     return jsonify(item.to_dict()), 200
 
@@ -96,8 +111,13 @@ def create_sub_item(item_id):
     data = request.get_json()
     if not data or not data.get("name"):
         raise BadRequest("name is required")
+    if len(data["name"]) > 255:
+        raise BadRequest("name must be 255 characters or less")
+    quantity = data.get("quantity", 1)
+    if not isinstance(quantity, int) or quantity < 1:
+        raise BadRequest("quantity must be a positive integer")
 
-    sub_item = SubItem(item_id=item_id, name=data["name"], quantity=data.get("quantity", 1))
+    sub_item = SubItem(item_id=item_id, name=data["name"], quantity=quantity)
     db.session.add(sub_item)
     db.session.commit()
     return jsonify(sub_item.to_dict()), 201
@@ -115,9 +135,18 @@ def update_sub_item(sub_item_id):
     if not sub_item or sub_item.item.bag.user_id != user_id:
         raise NotFound("SubItem not found")
 
-    sub_item.name = data.get("name") or sub_item.name
-    sub_item.quantity = data.get("quantity") or sub_item.quantity
-    sub_item.packed = data.get("packed") if "packed" in data else sub_item.packed
+    new_name = data.get("name")
+    if new_name is not None:
+        if not new_name or len(new_name) > 255:
+            raise BadRequest("name must be between 1 and 255 characters")
+        sub_item.name = new_name
+    if "quantity" in data:
+        qty = data["quantity"]
+        if not isinstance(qty, int) or qty < 1:
+            raise BadRequest("quantity must be a positive integer")
+        sub_item.quantity = qty
+    if "packed" in data:
+        sub_item.packed = data["packed"]
     db.session.commit()
     return jsonify(sub_item.to_dict()), 200
 

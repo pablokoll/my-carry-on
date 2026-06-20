@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
 from errors import BadRequest, NotFound
-from extensions import db, get_current_user_id
+from extensions import db, get_current_user_id, limiter
 from models import ChatMessage, ChatSession, Trip
 from services.chat_service import (
     MODEL,
@@ -13,9 +13,11 @@ from services.chat_service import (
     compact_history,
     generate_session_title,
     get_history,
+    get_rpd_status,
     parse_reply,
     save_messages,
     save_context_message,
+    _check_rpd,
 )
 
 chat_bp = Blueprint("chat", __name__)
@@ -129,6 +131,7 @@ def get_session_messages(session_id):
 
 @chat_bp.route("/chat", methods=["POST"])
 @jwt_required()
+@limiter.limit("30 per minute")
 def chat():
     user_id = get_current_user_id()
     data = request.get_json()
@@ -157,6 +160,19 @@ def chat():
 
     gemini_history = build_gemini_history(db_history, system_prompt)
     user_message = messages[-1]["content"]
+
+    remaining = _check_rpd()
+    if remaining is None:
+        # Reset happens at midnight UTC — tell frontend to wait until then
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        wait_seconds = int((midnight - now).total_seconds())
+        return jsonify({
+            "error": "rate_limit_daily",
+            "message": "Límite diario de consultas alcanzado. Se restablece a medianoche UTC.",
+            "wait_seconds": wait_seconds,
+        }), 429
 
     from google.genai.errors import ClientError
     try:
@@ -219,3 +235,11 @@ def log_context():
 
     save_context_message(session_id, user_id, content)
     return jsonify({"ok": True}), 200
+
+
+# --- RPD status endpoint ---
+
+@chat_bp.route("/chat/status", methods=["GET"])
+@jwt_required()
+def chat_status():
+    return jsonify(get_rpd_status()), 200

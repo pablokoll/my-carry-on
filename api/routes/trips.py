@@ -60,6 +60,8 @@ def create_trip():
     data = request.get_json()
     if not data or not data.get("name"):
         raise BadRequest("name is required")
+    if len(data["name"]) > 255:
+        raise BadRequest("name must be 255 characters or less")
 
     trip = Trip(
         user_id=user_id,

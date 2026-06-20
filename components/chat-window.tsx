@@ -679,6 +679,7 @@ function ChatPanel({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
+  const [rateLimitType, setRateLimitType] = useState<"rpm" | "rpd">("rpm");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -766,7 +767,11 @@ function ChatPanel({
       qc.setQueryData(keys.chatMessages(session.id), (prev: ChatMessage[] | undefined) =>
         (prev ?? []).filter((m) => m.id !== optimistic.id),
       );
-      if (err.status === 429) setRateLimitSeconds(err.wait_seconds ?? 60);
+      if (err.status === 429) {
+        const type = err.error === "rate_limit_daily" ? "rpd" : "rpm";
+        setRateLimitType(type);
+        setRateLimitSeconds(err.wait_seconds ?? 60);
+      }
     } finally {
       setLoading(false);
     }
@@ -1094,10 +1099,21 @@ function ChatPanel({
             flexShrink: 0,
           }}
         >
-          <span>Límite alcanzado. Podés continuar en</span>
-          <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-            {formatTime(countdown)}
-          </span>
+          {rateLimitType === "rpd" ? (
+            <>
+              <span>Límite diario alcanzado. Se restablece en</span>
+              <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                {formatTime(countdown)}
+              </span>
+            </>
+          ) : (
+            <>
+              <span>Límite alcanzado. Podés continuar en</span>
+              <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                {formatTime(countdown)}
+              </span>
+            </>
+          )}
         </div>
       )}
 

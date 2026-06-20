@@ -16,6 +16,9 @@ def get_bags():
     return jsonify([bag.to_dict() for bag in bags]), 200
 
 
+ALLOWED_BAG_TYPES = {"carry-on", "luggage", "backpack", "handbag", "toiletry bag", "worn", "other"}
+
+
 @bags_bp.route("/bags", methods=["POST"])
 @jwt_required()
 def create_bag():
@@ -25,6 +28,10 @@ def create_bag():
         raise BadRequest("name is required")
     if not data.get("type"):
         raise BadRequest("type is required")
+    if len(data["name"]) > 255:
+        raise BadRequest("name must be 255 characters or less")
+    if data["type"] not in ALLOWED_BAG_TYPES:
+        raise BadRequest(f"type must be one of: {', '.join(sorted(ALLOWED_BAG_TYPES))}")
 
     bag = Bag(user_id=user_id, name=data["name"], type=data["type"])
     db.session.add(bag)
@@ -61,8 +68,16 @@ def update_bag(bag_id):
     if not bag or bag.user_id != user_id:
         raise NotFound("Bag not found")
 
-    bag.name = data.get("name") or bag.name
-    bag.type = data.get("type") if "type" in data else bag.type
+    new_name = data.get("name")
+    new_type = data.get("type")
+    if new_name is not None:
+        if not new_name or len(new_name) > 255:
+            raise BadRequest("name must be between 1 and 255 characters")
+        bag.name = new_name
+    if new_type is not None:
+        if new_type not in ALLOWED_BAG_TYPES:
+            raise BadRequest(f"type must be one of: {', '.join(sorted(ALLOWED_BAG_TYPES))}")
+        bag.type = new_type
     db.session.commit()
     return jsonify(bag.to_dict()), 200
 
@@ -149,6 +164,10 @@ def assign_bag_to_trip(trip_id):
     if not data or not data.get("bag_id"):
         raise BadRequest("bag_id is required")
 
+    trip = Trip.query.get(trip_id)
+    if not trip or trip.user_id != user_id:
+        raise NotFound("Trip not found")
+
     bag = Bag.query.get(data["bag_id"])
     if not bag or bag.user_id != user_id:
         raise NotFound("Bag not found")
@@ -166,13 +185,18 @@ def assign_bag_to_trip(trip_id):
 @jwt_required()
 def unassign_bag_from_trip(trip_id, bag_id):
     user_id = get_current_user_id()
-    trip_bag = TripBag.query.filter_by(trip_id=trip_id, bag_id=bag_id).first()
-    if not trip_bag:
-        raise NotFound("Assignment not found")
+
+    trip = Trip.query.get(trip_id)
+    if not trip or trip.user_id != user_id:
+        raise NotFound("Trip not found")
 
     bag = Bag.query.get(bag_id)
     if not bag or bag.user_id != user_id:
         raise NotFound("Bag not found")
+
+    trip_bag = TripBag.query.filter_by(trip_id=trip_id, bag_id=bag_id).first()
+    if not trip_bag:
+        raise NotFound("Assignment not found")
 
     db.session.delete(trip_bag)
     db.session.commit()
