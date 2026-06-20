@@ -62,6 +62,13 @@ def get_categories() -> list[str]:
     return _categories_cache
 
 
+def _s(value: str) -> str:
+    """Sanitize user-supplied strings before embedding in the system prompt.
+    Strips leading/trailing whitespace and removes backtick sequences that
+    could be used to break out of fenced blocks."""
+    return value.strip().replace("```", "'''")
+
+
 def build_system_prompt(trip: Trip) -> str:
     today = date.today().isoformat()
 
@@ -71,23 +78,23 @@ def build_system_prompt(trip: Trip) -> str:
         arr = dest.arrival_date.isoformat() if dest.arrival_date else "?"
         dep = dest.departure_date.isoformat() if dest.departure_date else "?"
         destinations.append(
-            f"  - {dest.city}, {dest.country} ({arr} → {dep}) | weather: {weather}"
+            f"  - {_s(dest.city)}, {_s(dest.country)} ({arr} → {dep}) | weather: {weather}"
         )
 
     bags = []
     bag_refs = []
     for tb in trip.trip_bags:
         bag = tb.bag
-        bag_refs.append(f"  - id={bag.id} name='{bag.name}' type={bag.type}")
+        bag_refs.append(f"  - id={bag.id} name='{_s(bag.name)}' type={bag.type}")
         items = []
         for item in bag.items:
             if item.sub_items:
-                subs = ", ".join(f"{s.name} x{s.quantity}" for s in item.sub_items)
-                items.append(f"    · [id={item.id}] {item.name} (has sub-items: {subs})")
+                subs = ", ".join(f"{_s(s.name)} x{s.quantity}" for s in item.sub_items)
+                items.append(f"    · [id={item.id}] {_s(item.name)} (has sub-items: {subs})")
             else:
-                items.append(f"    · [id={item.id}] {item.name} x{item.quantity}")
+                items.append(f"    · [id={item.id}] {_s(item.name)} x{item.quantity}")
         bags.append(
-            f"  Bag '{bag.name}' (id={bag.id}, {bag.type}):\n"
+            f"  Bag '{_s(bag.name)}' (id={bag.id}, {bag.type}):\n"
             + ("\n".join(items) if items else "    (empty)")
         )
 
@@ -102,7 +109,7 @@ def build_system_prompt(trip: Trip) -> str:
     return f"""You are an expert travel packing assistant helping the user pack for their trip.
 
 Today: {today}
-Trip: {trip.name} ({start} → {end})
+Trip: {_s(trip.name)} ({start} → {end})
 
 Destinations:
 {chr(10).join(destinations) if destinations else "  None added yet."}

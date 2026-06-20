@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
 from errors import BadRequest, NotFound
-from extensions import db, get_current_user_id
+from extensions import db, get_current_user_id, limiter
 from models import ChatMessage, ChatSession, Trip
 from services.chat_service import (
     MODEL,
@@ -129,6 +129,7 @@ def get_session_messages(session_id):
 
 @chat_bp.route("/chat", methods=["POST"])
 @jwt_required()
+@limiter.limit("30 per minute")
 def chat():
     user_id = get_current_user_id()
     data = request.get_json()

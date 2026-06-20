@@ -19,6 +19,10 @@ def register():
     data = request.get_json()
     if not data or not data.get("email") or not data.get("password"):
         raise BadRequest("Email and password are required")
+    if len(data["password"]) < 8:
+        raise BadRequest("Password must be at least 8 characters")
+    if len(data["email"]) > 255:
+        raise BadRequest("Email must be 255 characters or less")
 
     try:
         user = User(email=data["email"])
