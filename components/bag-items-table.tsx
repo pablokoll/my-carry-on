@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -192,9 +192,10 @@ interface BagItemsTableProps {
   initialItems: Item[]
   categories: Category[]
   onItemsChange?: (items: Item[]) => void
+  showPacked?: boolean
 }
 
-export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }: BagItemsTableProps) {
+export function BagItemsTable({ bagId, initialItems, categories, onItemsChange, showPacked = true }: BagItemsTableProps) {
   const [serverItems, setServerItems] = useState<Item[]>(initialItems)
   const [editMode, setEditMode] = useState(false)
   const [drafts, setDrafts] = useState<RowDraft[]>([])
@@ -214,6 +215,10 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set())
 
   const firstInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!editMode) setServerItems(initialItems)
+  }, [initialItems])
 
   function syncItems(next: Item[]) {
     setServerItems(next)
@@ -436,16 +441,16 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
 
     return (
       <React.Fragment key={item.id}>
-        <tr style={{ background: color?.bg ?? 'transparent', opacity: item.packed ? 0.55 : 1, transition: 'opacity 180ms' }}>
+        <tr onClick={hasSubs ? () => toggleExpand(item.id) : undefined} style={{ background: color?.bg ?? 'transparent', opacity: showPacked && item.packed ? 0.55 : 1, transition: 'opacity 180ms', cursor: hasSubs ? 'pointer' : 'default' }}>
           <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
             {hasSubs ? (
-              <button onClick={() => toggleExpand(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '10px', padding: '0 8px', lineHeight: 1, transition: 'transform 120ms', transform: expandedSubs ? 'rotate(90deg)' : 'none' }}>▶</button>
-            ) : (
-              <input type="checkbox" checked={item.packed} onChange={() => togglePacked(item)} style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }} />
-            )}
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '10px', padding: '0 8px', lineHeight: 1, transition: 'transform 120ms', transform: expandedSubs ? 'rotate(90deg)' : 'none' }}>▶</button>
+            ) : showPacked ? (
+              <input type="checkbox" checked={item.packed} onChange={() => togglePacked(item)} onClick={e => e.stopPropagation()} style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }} />
+            ) : null}
           </td>
           <td style={{ padding: '0', verticalAlign: 'middle' }}>
-            <div style={{ ...cellInner, textDecoration: item.packed ? 'line-through' : 'none' }}>{item.name}</div>
+            <div style={{ ...cellInner, textDecoration: showPacked && item.packed ? 'line-through' : 'none' }}>{item.name}</div>
           </td>
           <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
             <div style={{ ...cellInner, color: item.quantity > 1 ? 'var(--foreground)' : 'var(--fg-muted)' }}>{item.quantity}</div>
@@ -462,12 +467,12 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
           </td>
         </tr>
         {hasSubs && expandedSubs && item.sub_items.map(sub => (
-          <tr key={`sub-${sub.id}`} style={{ background: color ? color.bg : 'transparent', opacity: sub.packed ? 0.5 : 0.85 }}>
+          <tr key={`sub-${sub.id}`} style={{ background: color ? color.bg : 'transparent', opacity: showPacked && sub.packed ? 0.5 : 0.85 }}>
             <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
-              <input type="checkbox" checked={sub.packed} onChange={() => toggleSubPacked(item.id, sub)} style={{ width: '13px', height: '13px', accentColor: 'var(--primary)', cursor: 'pointer' }} />
+              {showPacked && <input type="checkbox" checked={sub.packed} onChange={() => toggleSubPacked(item.id, sub)} style={{ width: '13px', height: '13px', accentColor: 'var(--primary)', cursor: 'pointer' }} />}
             </td>
             <td style={{ padding: '0', verticalAlign: 'middle' }}>
-              <div style={{ ...cellInner, fontSize: '12px', paddingLeft: '24px', textDecoration: sub.packed ? 'line-through' : 'none', color: 'var(--fg-secondary)' }}>{sub.name}</div>
+              <div style={{ ...cellInner, fontSize: '12px', paddingLeft: '24px', textDecoration: showPacked && sub.packed ? 'line-through' : 'none', color: 'var(--fg-secondary)' }}>{sub.name}</div>
             </td>
             <td style={{ padding: '0', textAlign: 'center', verticalAlign: 'middle' }}>
               <div style={{ ...cellInner, fontSize: '12px', color: sub.quantity > 1 ? 'var(--foreground)' : 'var(--fg-muted)' }}>{sub.quantity}</div>
@@ -575,7 +580,6 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
 
   // ── Main render ────────────────────────────────────────────────────────────
 
-  const packed = serverItems.filter(i => i.packed).length
   const isEmpty = serverItems.length === 0 && !editMode
   const isGrouped = grouping.length > 0
   const filterCatId = (columnFilters.find(f => f.id === 'category')?.value as number | 'all') ?? 'all'
@@ -586,7 +590,6 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange }
       {serverItems.length > 0 && !editMode && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>{packed}/{serverItems.length} packed</span>
             <select
               value={filterCatId === 'all' ? 'all' : String(filterCatId)}
               onChange={e => setColumnFilters(e.target.value === 'all' ? [] : [{ id: 'category', value: Number(e.target.value) }])}
