@@ -68,6 +68,7 @@ export default function BagDetailPage() {
         bagId={bagData.id}
         initialItems={bagData.items ?? []}
         categories={categories as Category[]}
+        showPacked={false}
       />
 
       <FormModal
