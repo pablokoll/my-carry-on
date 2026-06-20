@@ -20,6 +20,32 @@ _WEATHER_TTL_SECONDS = 1800
 COMPACT_THRESHOLD = 30
 MESSAGES_KEPT_AFTER_COMPACT = 10
 
+# Daily request counter — resets at midnight UTC (matches Gemini's RPD reset).
+# Free tier without billing: 20 RPD. With billing enabled: 1000 RPD.
+# Set via RPD_LIMIT env var so it can be changed without a redeploy.
+RPD_LIMIT = int(os.environ.get("GEMINI_RPD_LIMIT", "18"))  # default: safe buffer under free 20 RPD
+_rpd_count: int = 0
+_rpd_date: date | None = None
+
+
+def _check_rpd() -> int | None:
+    """Increment daily counter. Returns remaining requests, or None if limit reached."""
+    global _rpd_count, _rpd_date
+    today = date.today()
+    if _rpd_date != today:
+        _rpd_count = 0
+        _rpd_date = today
+    if _rpd_count >= RPD_LIMIT:
+        return None
+    _rpd_count += 1
+    return RPD_LIMIT - _rpd_count
+
+
+def get_rpd_status() -> dict:
+    today = date.today()
+    count = _rpd_count if _rpd_date == today else 0
+    return {"used": count, "limit": RPD_LIMIT, "remaining": max(0, RPD_LIMIT - count)}
+
 
 def get_weather(city: str) -> str:
     now = datetime.now(timezone.utc)
