@@ -32,6 +32,20 @@ export interface Destination {
   departure_date: string | null
 }
 
+export interface ChatSession {
+  id: number
+  title: string | null
+  created_at: string
+  message_count: number
+}
+
+export interface ChatMessage {
+  id: number
+  role: 'user' | 'model' | 'summary'
+  content: string
+  created_at: string
+}
+
 export type BagWithItems = Bag & { items: Item[] }
 
 // ── Query keys ────────────────────────────────────────────────────────────────
@@ -45,6 +59,8 @@ export const keys = {
   bag: (id: number | string) => ['bags', Number(id)] as const,
   bagItems: (id: number | string) => ['bags', Number(id), 'items'] as const,
   categories: () => ['categories'] as const,
+  chatSessions: (tripId: number) => ['chat', 'sessions', tripId] as const,
+  chatMessages: (sessionId: number) => ['chat', 'sessions', sessionId, 'messages'] as const,
 }
 
 // ── Queries ───────────────────────────────────────────────────────────────────
@@ -93,6 +109,19 @@ export const useCategories = () => useQuery({
   queryKey: keys.categories(),
   queryFn: () => api.get<Category[]>('/categories'),
   staleTime: Infinity,
+})
+
+export const useChatSessions = (tripId: number | null) => useQuery({
+  queryKey: tripId != null ? keys.chatSessions(tripId) : ['chat', 'sessions', null],
+  queryFn: () => api.get<ChatSession[]>(`/chat/sessions?trip_id=${tripId}`),
+  enabled: tripId != null,
+})
+
+export const useChatMessages = (sessionId: number | null) => useQuery({
+  queryKey: sessionId != null ? keys.chatMessages(sessionId) : ['chat', 'sessions', null, 'messages'],
+  queryFn: () => api.get<ChatMessage[]>(`/chat/sessions/${sessionId}/messages`),
+  enabled: sessionId != null,
+  staleTime: 0,
 })
 
 // ── Trip mutations ────────────────────────────────────────────────────────────
@@ -219,5 +248,100 @@ export const useUnassignBag = (tripId: number | string) => {
   return useMutation({
     mutationFn: (bagId: number) => api.delete(`/trips/${tripId}/bags/${bagId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.tripBags(tripId) }),
+  })
+}
+
+// ── Chat mutations ────────────────────────────────────────────────────────────
+
+export const useCreateChatSession = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { trip_id: number }) => api.post<ChatSession>('/chat/sessions', data),
+    onSuccess: (_session, vars) => {
+      qc.invalidateQueries({ queryKey: keys.chatSessions(vars.trip_id) })
+    },
+  })
+}
+
+export const useDeleteChatSession = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id }: { id: number; tripId: number }) => api.delete(`/chat/sessions/${id}`),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: keys.chatSessions(vars.tripId) })
+    },
+  })
+}
+
+export const useClearChatMessages = (sessionId: number) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete(`/chat/sessions/${sessionId}/messages`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.chatMessages(sessionId) })
+    },
+  })
+}
+
+export const useSendChatMessage = () => {
+  return useMutation({
+    mutationFn: (data: { session_id: number; messages: { role: string; content: string }[] }) =>
+      api.post<{
+        reply: string
+        suggestions: unknown[]
+        history: ChatMessage[]
+        session_title?: string
+      }>('/chat', data),
+  })
+}
+
+export const useLogChatContext = () => {
+  return useMutation({
+    mutationFn: (data: { session_id: number; content: string }) =>
+      api.post('/chat/log', data),
+  })
+}
+
+export const useAddBagItem = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ bagId, data }: { bagId: number; tripId: number; data: { name: string; quantity: number; category_id?: number | null } }) =>
+      api.post<{ id: number }>(`/bags/${bagId}/items`, data),
+    onSuccess: (_result, vars) => {
+      qc.invalidateQueries({ queryKey: keys.bagItems(vars.bagId) })
+      qc.invalidateQueries({ queryKey: keys.tripBags(vars.tripId) })
+    },
+  })
+}
+
+export const useUpdateItem = () => {
+  return useMutation({
+    mutationFn: ({ itemId, data }: { itemId: number; data: Record<string, unknown> }) =>
+      api.put(`/items/${itemId}`, data),
+  })
+}
+
+export const useAddSubItem = () => {
+  return useMutation({
+    mutationFn: ({ itemId, data }: { itemId: number; data: { name: string; quantity: number } }) =>
+      api.post(`/items/${itemId}/sub-items`, data),
+  })
+}
+
+export const useCreateBagWithItems = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ tripId, name, bagType, items }: { tripId: number; name: string; bagType: string; items: string[] }) => {
+      const bag = await api.post<{ id: number }>('/bags', { name, type: bagType })
+      await api.post(`/trips/${tripId}/bags`, { bag_id: bag.id })
+      if (items.length > 0) {
+        await Promise.all(items.map((itemName) => api.post(`/bags/${bag.id}/items`, { name: itemName, quantity: 1 })))
+      }
+      return bag
+    },
+    onSuccess: (_result, vars) => {
+      qc.invalidateQueries({ queryKey: keys.tripBags(vars.tripId) })
+      qc.invalidateQueries({ queryKey: keys.bags() })
+    },
   })
 }

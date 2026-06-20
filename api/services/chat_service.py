@@ -186,6 +186,7 @@ Append this block at the END of your response (after all text):
 - `item_id`: the id of the existing item (from bag context above)
 - `item_name`: the generic name for the item group (e.g. "Pantalón")
 - `bag_id`, `bag_name`: required
+- `category`: from available list, omit if none fits (used if parent item needs to be created)
 - `new_sub_item`: object with `name` (the variant descriptor, e.g. "Gris") and `quantity` (integer)
 - `also_convert_original`: true only if the existing item has NO sub-items yet (you need to convert it)
 - `original_name`: the current name of the existing item (e.g. "Pantalón negro") — only when `also_convert_original` is true

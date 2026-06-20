@@ -3,7 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import ReactMarkdown from "react-markdown";
-import { api } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  keys,
+  useTrips,
+  useCategories,
+  useChatSessions,
+  useChatMessages,
+  useCreateChatSession,
+  useDeleteChatSession,
+  useClearChatMessages,
+  useSendChatMessage,
+  useLogChatContext,
+  useAddBagItem,
+  useUpdateItem,
+  useAddSubItem,
+  useCreateBagWithItems,
+} from "@/lib/queries";
+import type { ChatSession, ChatMessage } from "@/lib/queries";
 
 type Mode = "popup" | "fullscreen";
 type View = "sessions" | "chat";
@@ -14,20 +31,6 @@ interface Trip {
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
-}
-
-interface ChatSession {
-  id: number;
-  title: string | null;
-  created_at: string;
-  message_count: number;
-}
-
-interface ChatMessage {
-  id: number;
-  role: "user" | "model" | "summary";
-  content: string;
-  created_at: string;
 }
 
 interface ApiError extends Error {
@@ -56,6 +59,7 @@ interface SuggestionAddSubItem {
   item_name: string;
   bag_id: number;
   bag_name: string;
+  category?: string;
   new_sub_item: { name: string; quantity: number };
   also_convert_original?: boolean;
   original_name?: string;
@@ -671,38 +675,42 @@ function ChatPanel({
   onClearMessages: (id: number) => void;
   onDeleteSession: (id: number) => void;
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const qc = useQueryClient();
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const countdown = useCountdown(rateLimitSeconds, () =>
-    setRateLimitSeconds(0),
+  const { data: messagesData, isLoading: messagesLoading } = useChatMessages(session.id);
+  const messages: ChatMessage[] = (messagesData ?? [] as ChatMessage[]).filter(
+    (m: ChatMessage) => !m.content.startsWith("[system:"),
   );
-  const blocked = countdown > 0 || suggestions.length > 0;
+  const historyLoaded = !messagesLoading;
+
+  const clearChatMessages = useClearChatMessages(session.id);
+  const sendChatMessage = useSendChatMessage();
+  const logChatContext = useLogChatContext();
+  const addBagItem = useAddBagItem();
+  const updateItem = useUpdateItem();
+  const addSubItem = useAddSubItem();
+  const createBagWithItems = useCreateBagWithItems();
 
   useEffect(() => {
-    setMessages([]);
     setSuggestions([]);
-    setHistoryLoaded(false);
-    api
-      .get<ChatMessage[]>(`/chat/sessions/${session.id}/messages`)
-      .then((h) =>
-        setMessages(h.filter((m) => !m.content.startsWith("[system:"))),
-      )
-      .catch(() => {})
-      .finally(() => setHistoryLoaded(true));
   }, [session.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading, suggestions]);
+
+  const countdown = useCountdown(rateLimitSeconds, () =>
+    setRateLimitSeconds(0),
+  );
+  const blocked = countdown > 0 || suggestions.length > 0;
 
   // Auto-resize textarea
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -726,26 +734,26 @@ function ChatPanel({
       content: text,
       created_at: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, optimistic]);
+    // Optimistically add user message to cache
+    qc.setQueryData(keys.chatMessages(session.id), (prev: ChatMessage[] | undefined) =>
+      [...(prev ?? []), optimistic],
+    );
     try {
-      const data = await api.post<{
-        reply: string;
-        suggestions: Suggestion[];
-        history: ChatMessage[];
-        session_title?: string;
-      }>("/chat", {
+      const data = await sendChatMessage.mutateAsync({
         session_id: session.id,
         messages: [{ role: "user", content: text }],
       });
-      setMessages(
-        data.history.filter((m) => !m.content.startsWith("[system:")),
+      qc.setQueryData(
+        keys.chatMessages(session.id),
+        data.history.filter((m: ChatMessage) => !m.content.startsWith("[system:")),
       );
       if (data.session_title) {
         onSessionTitleUpdate(session.id, data.session_title);
+        qc.invalidateQueries({ queryKey: keys.chatSessions(trip.id) });
       }
       const seen = new Set<string>();
       setSuggestions(
-        (data.suggestions ?? []).filter((s) => {
+        (data.suggestions as Suggestion[] ?? []).filter((s) => {
           const k = suggestionKey(s);
           if (seen.has(k)) return false;
           seen.add(k);
@@ -754,7 +762,10 @@ function ChatPanel({
       );
     } catch (e) {
       const err = e as ApiError;
-      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      // Remove optimistic message on error
+      qc.setQueryData(keys.chatMessages(session.id), (prev: ChatMessage[] | undefined) =>
+        (prev ?? []).filter((m) => m.id !== optimistic.id),
+      );
       if (err.status === 429) setRateLimitSeconds(err.wait_seconds ?? 60);
     } finally {
       setLoading(false);
@@ -773,52 +784,75 @@ function ChatPanel({
     try {
       let confirmation = "";
       if (s.type === "add_item") {
-        await api.post(`/bags/${s.bag_id}/items`, {
-          name: s.name,
-          quantity: s.quantity ?? 1,
-          category_id: resolveCategory(s.category) ?? null,
+        await addBagItem.mutateAsync({
+          bagId: s.bag_id,
+          tripId: trip.id,
+          data: {
+            name: s.name,
+            quantity: s.quantity ?? 1,
+            category_id: resolveCategory(s.category) ?? null,
+          },
         });
         confirmation = `[system: user accepted — added "${s.name}" (qty ${s.quantity ?? 1}) to bag "${s.bag_name}"]`;
       } else if (s.type === "add_sub_item") {
-        if (s.also_convert_original && s.original_name) {
-          await api.put(`/items/${s.item_id}`, { name: s.item_name });
-          await api.post(`/items/${s.item_id}/sub-items`, {
-            name: s.original_name,
-            quantity: 1,
+        // Resolve item_id at accept time — the LLM may have used a stale id
+        // (e.g. item was just created in the same session). Match by name.
+        // Resolve the parent item at accept time — LLM may reference a stale
+        // or not-yet-created item_id. Match by name first; create if missing.
+        let realItemId: number | null = null;
+        try {
+          const bagItems = await qc.fetchQuery({
+            queryKey: keys.bagItems(s.bag_id),
+            queryFn: () =>
+              import("@/lib/api").then(({ api }) =>
+                api.get<{ id: number; name: string }[]>(`/bags/${s.bag_id}/items`),
+              ),
+          });
+          const match = bagItems.find(
+            (i: { id: number; name: string }) =>
+              i.name.toLowerCase() === s.item_name.toLowerCase() ||
+              i.name.toLowerCase() === (s.original_name ?? "").toLowerCase(),
+          );
+          if (match) realItemId = match.id;
+        } catch {
+          /* fall through to create */
+        }
+        if (realItemId === null) {
+          // Parent doesn't exist yet — create it first
+          const created = await addBagItem.mutateAsync({
+            bagId: s.bag_id,
+            tripId: trip.id,
+            data: {
+              name: s.item_name,
+              quantity: 1,
+              category_id: resolveCategory(s.category) ?? null,
+            },
+          });
+          realItemId = (created as { id: number }).id;
+        } else if (s.also_convert_original && s.original_name) {
+          await updateItem.mutateAsync({ itemId: realItemId, data: { name: s.item_name } });
+          await addSubItem.mutateAsync({
+            itemId: realItemId,
+            data: { name: s.original_name, quantity: 1 },
           });
         }
-        await api.post(`/items/${s.item_id}/sub-items`, {
-          name: s.new_sub_item.name,
-          quantity: s.new_sub_item.quantity,
+        await addSubItem.mutateAsync({
+          itemId: realItemId,
+          data: { name: s.new_sub_item.name, quantity: s.new_sub_item.quantity },
         });
         confirmation = `[system: user accepted — added variant "${s.new_sub_item.name}" to item "${s.item_name}" in bag "${s.bag_name}"]`;
       } else {
-        const bag = await api.post<{ id: number }>("/bags", {
+        await createBagWithItems.mutateAsync({
+          tripId: trip.id,
           name: s.name,
-          type: s.bag_type,
+          bagType: s.bag_type,
+          items: s.items,
         });
-        await api.post(`/trips/${trip.id}/bags`, { bag_id: bag.id });
-        if (s.items.length > 0) {
-          await Promise.all(
-            s.items.map((name) =>
-              api.post(`/bags/${bag.id}/items`, { name, quantity: 1 }),
-            ),
-          );
-        }
         confirmation = `[system: user accepted — created bag "${s.name}" (${s.bag_type}) with items: ${s.items.join(", ")}]`;
       }
       setSuggestions((prev) => prev.filter((p) => suggestionKey(p) !== key));
-      const mutatedBagId =
-        s.type === "add_item" ? s.bag_id
-        : s.type === "add_sub_item" ? s.bag_id
-        : null;
-      setTimeout(
-        () => window.dispatchEvent(new CustomEvent("chat:bag-mutated", { detail: { bag_id: mutatedBagId } })),
-        100,
-      );
-      api
-        .post("/chat/log", { session_id: session.id, content: confirmation })
-        .catch(() => {});
+      qc.invalidateQueries({ queryKey: keys.tripBags(trip.id) });
+      logChatContext.mutate({ session_id: session.id, content: confirmation });
     } catch {
       /* silent */
     } finally {
@@ -842,8 +876,7 @@ function ChatPanel({
   async function handleClear() {
     setMenuOpen(false);
     try {
-      await api.delete(`/chat/sessions/${session.id}/messages`);
-      setMessages([]);
+      await clearChatMessages.mutateAsync();
       setSuggestions([]);
       onClearMessages(session.id);
     } catch {
@@ -1156,32 +1189,26 @@ function ChatPanel({
 
 export function ChatWindow() {
   const pathname = usePathname();
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("popup");
   const [view, setView] = useState<View>("sessions");
-  const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
-  const [tripsLoaded, setTripsLoaded] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(
-    null,
-  );
+  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
 
-  useEffect(() => {
-    api
-      .get<Trip[]>("/trips")
-      .then((t) => {
-        setTrips(t);
-        setTripsLoaded(true);
-      })
-      .catch(() => setTripsLoaded(true));
-    api
-      .get<Category[]>("/categories")
-      .then(setCategories)
-      .catch(() => {});
-  }, []);
+  const { data: tripsData, isSuccess: tripsLoaded } = useTrips();
+  const trips: Trip[] = tripsData ?? [];
+
+  const { data: categoriesData } = useCategories();
+  const categories: Category[] = (categoriesData ?? []) as Category[];
+
+  const { data: sessionsData, isLoading: sessionsLoading } = useChatSessions(
+    selectedTrip?.id ?? null,
+  );
+  const sessions: ChatSession[] = sessionsData ?? [];
+
+  const createChatSession = useCreateChatSession();
+  const deleteChatSession = useDeleteChatSession();
 
   // Pre-select trip when opening based on current route
   useEffect(() => {
@@ -1200,25 +1227,10 @@ export function ChatWindow() {
     if (active && !selectedTrip) setSelectedTrip(active);
   }, [open, pathname, trips, tripsLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load sessions when a trip is selected
-  useEffect(() => {
-    if (!selectedTrip) return;
-    setSessionsLoading(true);
-    setSessions([]);
-    api
-      .get<ChatSession[]>(`/chat/sessions?trip_id=${selectedTrip.id}`)
-      .then(setSessions)
-      .catch(() => {})
-      .finally(() => setSessionsLoading(false));
-  }, [selectedTrip?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
   async function handleCreateSession() {
     if (!selectedTrip) return;
     try {
-      const s = await api.post<ChatSession>("/chat/sessions", {
-        trip_id: selectedTrip.id,
-      });
-      setSessions((prev) => [s, ...prev]);
+      const s = await createChatSession.mutateAsync({ trip_id: selectedTrip.id });
       setSelectedSession(s);
       setView("chat");
     } catch {
@@ -1232,26 +1244,23 @@ export function ChatWindow() {
   }
 
   function handleSessionTitleUpdate(id: number, title: string) {
-    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
     setSelectedSession((prev) => (prev?.id === id ? { ...prev, title } : prev));
   }
 
   function handleClearMessages(id: number) {
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === id ? { ...s, title: null, message_count: 0 } : s,
-      ),
-    );
     setSelectedSession((prev) =>
       prev?.id === id ? { ...prev, title: null, message_count: 0 } : prev,
     );
+    if (selectedTrip) {
+      qc.invalidateQueries({ queryKey: keys.chatSessions(selectedTrip.id) });
+    }
   }
 
   async function handleDeleteSession(id: number) {
+    if (!selectedTrip) return;
     try {
-      await api.delete(`/chat/sessions/${id}`)
+      await deleteChatSession.mutateAsync({ id, tripId: selectedTrip.id });
     } catch { /* silent */ }
-    setSessions((prev) => prev.filter((s) => s.id !== id));
     setSelectedSession(null);
     setView("sessions");
   }
