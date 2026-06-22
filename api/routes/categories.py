@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from errors import BadRequest, NotFound
-from extensions import db, get_current_user_id
+from extensions import db, get_current_user_id, get_or_404
 from models import Category
 
 categories_bp = Blueprint("categories", __name__)
@@ -39,10 +39,7 @@ def update_category(category_id):
     if not data:
         raise BadRequest("No data provided")
 
-    category = Category.query.get(category_id)
-    if not category or category.user_id != user_id:
-        raise NotFound("Category not found")
-
+    category = get_or_404(Category, category_id, user_id)
     category.name = data.get("name") or category.name
     db.session.commit()
     return jsonify(category.to_dict()), 200
@@ -52,10 +49,7 @@ def update_category(category_id):
 @jwt_required()
 def delete_category(category_id):
     user_id = get_current_user_id()
-    category = Category.query.get(category_id)
-    if not category or category.user_id != user_id:
-        raise NotFound("Category not found")
-
+    category = get_or_404(Category, category_id, user_id)
     db.session.delete(category)
     db.session.commit()
     return jsonify({"message": "Category deleted"}), 200

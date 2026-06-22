@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from errors import BadRequest, NotFound
-from extensions import db, get_current_user_id
+from extensions import db, get_current_user_id, get_or_404, get_owned_or_404
 from models import Destination, Trip
 
 destinations_bp = Blueprint("destinations", __name__)
@@ -11,10 +11,7 @@ destinations_bp = Blueprint("destinations", __name__)
 @jwt_required()
 def get_destinations(trip_id):
     user_id = get_current_user_id()
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
-
+    trip = get_or_404(Trip, trip_id, user_id)
     return jsonify([d.to_dict() for d in trip.destinations]), 200
 
 
@@ -22,9 +19,7 @@ def get_destinations(trip_id):
 @jwt_required()
 def create_destination(trip_id):
     user_id = get_current_user_id()
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
+    get_or_404(Trip, trip_id, user_id)
 
     data = request.get_json()
     if not data or not data.get("city"):
@@ -56,10 +51,7 @@ def update_destination(destination_id):
     if not data:
         raise BadRequest("No data provided")
 
-    destination = Destination.query.get(destination_id)
-    if not destination or destination.trip.user_id != user_id:
-        raise NotFound("Destination not found")
-
+    destination = get_owned_or_404(Destination, destination_id, user_id, "trip.user_id")
     destination.city = data.get("city") or destination.city
     destination.country = data.get("country") or destination.country
     destination.arrival_date = data.get("arrival_date") if "arrival_date" in data else destination.arrival_date
@@ -72,10 +64,7 @@ def update_destination(destination_id):
 @jwt_required()
 def delete_destination(destination_id):
     user_id = get_current_user_id()
-    destination = Destination.query.get(destination_id)
-    if not destination or destination.trip.user_id != user_id:
-        raise NotFound("Destination not found")
-
+    destination = get_owned_or_404(Destination, destination_id, user_id, "trip.user_id")
     db.session.delete(destination)
     db.session.commit()
     return jsonify({"message": "Destination deleted"}), 200

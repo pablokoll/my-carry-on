@@ -4,47 +4,14 @@ import re
 from datetime import date, datetime, timezone
 
 import requests
-from google import genai
 
 from extensions import db
-from models import ChatMessage, ChatSession, Trip
-
-_client = genai.Client(api_key=os.environ.get("API_KEY_AI_GOOGLE_STUDIO"))
-MODEL = "gemini-2.5-flash-lite"
+from models import ChatMessage, Trip
 
 OWM_API_KEY = os.environ.get("API_KEY_OPEN_WEATHER_MAP")
 
 _weather_cache: dict[str, tuple[str, datetime]] = {}
 _WEATHER_TTL_SECONDS = 1800
-
-COMPACT_THRESHOLD = 30
-MESSAGES_KEPT_AFTER_COMPACT = 10
-
-# Daily request counter — resets at midnight UTC (matches Gemini's RPD reset).
-# Free tier without billing: 20 RPD. With billing enabled: 1000 RPD.
-# Set via RPD_LIMIT env var so it can be changed without a redeploy.
-RPD_LIMIT = int(os.environ.get("GEMINI_RPD_LIMIT", "18"))  # default: safe buffer under free 20 RPD
-_rpd_count: int = 0
-_rpd_date: date | None = None
-
-
-def _check_rpd() -> int | None:
-    """Increment daily counter. Returns remaining requests, or None if limit reached."""
-    global _rpd_count, _rpd_date
-    today = date.today()
-    if _rpd_date != today:
-        _rpd_count = 0
-        _rpd_date = today
-    if _rpd_count >= RPD_LIMIT:
-        return None
-    _rpd_count += 1
-    return RPD_LIMIT - _rpd_count
-
-
-def get_rpd_status() -> dict:
-    today = date.today()
-    count = _rpd_count if _rpd_date == today else 0
-    return {"used": count, "limit": RPD_LIMIT, "remaining": max(0, RPD_LIMIT - count)}
 
 
 def get_weather(city: str) -> str:
@@ -65,9 +32,7 @@ def get_weather(city: str) -> str:
         if r.status_code != 200:
             return "weather unavailable"
         d = r.json()
-        desc = d["weather"][0]["description"]
-        temp = d["main"]["temp"]
-        result = f"{desc}, {temp:.0f}°C"
+        result = f"{d['weather'][0]['description']}, {d['main']['temp']:.0f}°C"
         _weather_cache[city] = (result, now)
         return result
     except Exception:
@@ -75,6 +40,7 @@ def get_weather(city: str) -> str:
 
 
 _categories_cache: list[str] | None = None
+
 
 def get_categories() -> list[str]:
     global _categories_cache
@@ -89,9 +55,7 @@ def get_categories() -> list[str]:
 
 
 def _s(value: str) -> str:
-    """Sanitize user-supplied strings before embedding in the system prompt.
-    Strips leading/trailing whitespace and removes backtick sequences that
-    could be used to break out of fenced blocks."""
+    """Sanitize user-supplied strings before embedding in the system prompt."""
     return value.strip().replace("```", "'''")
 
 
@@ -236,7 +200,6 @@ Append this block at the END of your response (after all text):
 
 
 def parse_reply(raw: str) -> tuple[str, list[dict]]:
-    """Split model reply into display text and structured suggestions."""
     suggestions = []
     pattern = r"```json\s*(\{.*?\})\s*```"
     match = re.search(pattern, raw, re.DOTALL)
@@ -261,46 +224,14 @@ def get_history(session_id: int, user_id: int) -> list[ChatMessage]:
     )
 
 
-def compact_history(session_id: int, user_id: int, messages: list[ChatMessage]) -> None:
-    non_summary = [m for m in messages if m.role != "summary"]
-    to_compact = non_summary[:-MESSAGES_KEPT_AFTER_COMPACT]
-    if not to_compact:
-        return
-
-    text = "\n".join(f"{m.role}: {m.content}" for m in to_compact)
-    summary_text = _client.models.generate_content(
-        model=MODEL,
-        contents=f"Summarize this packing assistant conversation keeping key decisions, "
-                 f"item suggestions, and any items the user decided to pack:\n\n{text}",
-    ).text
-
-    summary = ChatMessage(
-        session_id=session_id,
-        user_id=user_id,
-        role="summary",
-        content=summary_text,
-        created_at=datetime.now(timezone.utc),
-    )
-    db.session.add(summary)
-    db.session.commit()
-
-
-def _content(role: str, text: str) -> dict:
-    return {"role": role, "parts": [{"text": text}]}
-
-
-def build_gemini_history(messages: list[ChatMessage], system_prompt: str) -> list[dict]:
-    history = [
-        _content("user", system_prompt),
-        _content("model", "Understood! I'm ready to help pack for this trip."),
-    ]
-
+def build_gemini_history(messages: list[ChatMessage]) -> list[dict]:
     summary = next((m for m in reversed(messages) if m.role == "summary"), None)
 
+    history = []
     if summary:
         history += [
-            _content("user", f"[Conversation summary so far]: {summary.content}"),
-            _content("model", "Got it, I have the context from our previous conversation."),
+            {"role": "user", "parts": [{"text": f"[Conversation summary so far]: {summary.content}"}]},
+            {"role": "model", "parts": [{"text": "Got it, I have the context from our previous conversation."}]},
         ]
         cutoff = summary.created_at
         recent = [m for m in messages if m.role != "summary" and m.created_at > cutoff]
@@ -309,7 +240,7 @@ def build_gemini_history(messages: list[ChatMessage], system_prompt: str) -> lis
 
     for m in recent:
         role = "user" if m.role == "user" else "model"
-        history.append(_content(role, m.content))
+        history.append({"role": role, "parts": [{"text": m.content}]})
 
     return history
 
@@ -327,16 +258,3 @@ def save_context_message(session_id: int, user_id: int, content: str) -> None:
         content=content, created_at=datetime.now(timezone.utc),
     ))
     db.session.commit()
-
-
-def generate_session_title(first_user_msg: str, first_model_reply: str) -> str:
-    prompt = (
-        f"Generate a short title (3-5 words) for a packing assistant conversation "
-        f"that started with: '{first_user_msg}'. "
-        f"Reply with only the title, no quotes."
-    )
-    try:
-        result = _client.models.generate_content(model=MODEL, contents=prompt)
-        return result.text.strip()
-    except Exception:
-        return "Packing Session"
