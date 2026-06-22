@@ -8,13 +8,14 @@ from flask_jwt_extended import (
 from sqlalchemy.exc import IntegrityError
 
 from errors import BadRequest, Conflict, Unauthorized
-from extensions import db
+from extensions import db, limiter
 from models import User
 
 auth_bp = Blueprint("auth", __name__)
 
 
 @auth_bp.route("/auth/register", methods=["POST"])
+@limiter.limit("5 per minute; 20 per hour")
 def register():
     data = request.get_json()
     if not data or not data.get("email") or not data.get("password"):
@@ -36,6 +37,7 @@ def register():
 
 
 @auth_bp.route("/auth/login", methods=["POST"])
+@limiter.limit("10 per minute; 50 per hour")
 def login():
     data = request.get_json()
     if not data or not data.get("email") or not data.get("password"):

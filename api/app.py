@@ -48,11 +48,15 @@ def create_app():
     app.register_blueprint(destinations_bp)
     app.register_blueprint(items_bp)
 
+    is_prod = os.environ.get("FLASK_ENV") == "production"
+
     @app.after_request
     def set_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if is_prod:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
     @app.cli.command("seed")
