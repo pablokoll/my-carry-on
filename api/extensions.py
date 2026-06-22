@@ -12,3 +12,12 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 def get_current_user_id() -> int:
     return int(get_jwt_identity())
+
+
+def register_jwt_callbacks(jwt_instance):
+    from models.auth import TokenBlocklist
+
+    @jwt_instance.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        jti = jwt_payload["jti"]
+        return db.session.query(TokenBlocklist.id).filter_by(jti=jti).scalar() is not None

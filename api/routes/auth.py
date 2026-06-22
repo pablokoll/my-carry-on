@@ -2,19 +2,27 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
+    get_jwt,
     get_jwt_identity,
     jwt_required,
 )
 from sqlalchemy.exc import IntegrityError
 
 from errors import BadRequest, Conflict, Unauthorized
-from extensions import db
+from extensions import db, limiter
 from models import User
+from models.auth import AuthLog, TokenBlocklist
 
 auth_bp = Blueprint("auth", __name__)
 
 
+def _log(event: str, user_id: int | None = None):
+    db.session.add(AuthLog(event=event, user_id=user_id, ip=request.remote_addr))
+    db.session.commit()
+
+
 @auth_bp.route("/auth/register", methods=["POST"])
+@limiter.limit("5 per minute; 20 per hour")
 def register():
     data = request.get_json()
     if not data or not data.get("email") or not data.get("password"):
@@ -29,6 +37,7 @@ def register():
         user.set_password(data["password"])
         db.session.add(user)
         db.session.commit()
+        _log("register", user.id)
         return jsonify({"message": "User registered successfully"}), 201
     except IntegrityError:
         db.session.rollback()
@@ -36,6 +45,7 @@ def register():
 
 
 @auth_bp.route("/auth/login", methods=["POST"])
+@limiter.limit("10 per minute; 50 per hour")
 def login():
     data = request.get_json()
     if not data or not data.get("email") or not data.get("password"):
@@ -43,8 +53,10 @@ def login():
 
     user = User.query.filter_by(email=data["email"]).first()
     if not user or not user.check_password(data["password"]):
+        _log("login_failed", user.id if user else None)
         raise Unauthorized("Invalid credentials")
 
+    _log("login", user.id)
     access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
     return jsonify({"access_token": access_token, "refresh_token": refresh_token}), 200
@@ -86,4 +98,9 @@ def me():
 @auth_bp.route("/auth/logout", methods=["POST"])
 @jwt_required()
 def logout():
+    jti = get_jwt()["jti"]
+    user_id = int(get_jwt_identity())
+    db.session.add(TokenBlocklist(jti=jti))
+    db.session.commit()
+    _log("logout", user_id)
     return jsonify({"message": "Logout successful"}), 200

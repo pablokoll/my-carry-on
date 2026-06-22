@@ -8,7 +8,7 @@ from flask_cors import CORS
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 from errors import register_error_handlers
-from extensions import db, jwt, limiter, migrate
+from extensions import db, jwt, limiter, migrate, register_jwt_callbacks
 from routes.auth import auth_bp
 from routes.chat import chat_bp
 from routes.bags import bags_bp
@@ -32,10 +32,13 @@ def create_app():
     allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
     CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
 
+    app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024  # 1 MB
+
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
     limiter.init_app(app)  # type: ignore[arg-type]
+    register_jwt_callbacks(jwt)
 
     register_error_handlers(app)
 
@@ -48,11 +51,16 @@ def create_app():
     app.register_blueprint(destinations_bp)
     app.register_blueprint(items_bp)
 
+    is_prod = os.environ.get("FLASK_ENV") == "production"
+
     @app.after_request
     def set_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+        if is_prod:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
     @app.cli.command("seed")
