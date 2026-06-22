@@ -8,7 +8,7 @@ from flask_jwt_extended import (
 )
 from sqlalchemy.exc import IntegrityError
 
-from errors import BadRequest, Conflict, Unauthorized
+from errors import BadRequest, Conflict, Unauthorized, json_msg
 from extensions import db, limiter
 from models import User
 from models.auth import AuthLog, TokenBlocklist
@@ -38,7 +38,7 @@ def register():
         db.session.add(user)
         db.session.commit()
         _log("register", user.id)
-        return jsonify({"message": "User registered successfully"}), 201
+        return json_msg("User registered successfully", 201)
     except IntegrityError:
         db.session.rollback()
         raise Conflict("Email already exists")
@@ -103,4 +103,4 @@ def logout():
     db.session.add(TokenBlocklist(jti=jti))
     db.session.commit()
     _log("logout", user_id)
-    return jsonify({"message": "Logout successful"}), 200
+    return json_msg("Logout successful")

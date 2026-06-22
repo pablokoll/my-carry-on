@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from errors import BadRequest, NotFound
+from errors import BadRequest, NotFound, json_msg
 from extensions import db, get_current_user_id, get_or_404, get_owned_or_404
 from models import Bag, Item, SubItem
 
@@ -71,7 +71,7 @@ def delete_item(item_id):
     item = get_owned_or_404(Item, item_id, user_id, "bag.user_id")
     db.session.delete(item)
     db.session.commit()
-    return jsonify({"message": "Item deleted"}), 200
+    return json_msg("Item deleted")
 
 
 @items_bp.route("/items/<int:item_id>/sub-items", methods=["GET"])
@@ -136,4 +136,4 @@ def delete_sub_item(sub_item_id):
     sub_item = get_owned_or_404(SubItem, sub_item_id, user_id, "item.bag.user_id")
     db.session.delete(sub_item)
     db.session.commit()
-    return jsonify({"message": "SubItem deleted"}), 200
+    return json_msg("SubItem deleted")

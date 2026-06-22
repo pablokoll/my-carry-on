@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
-from errors import BadRequest
+from errors import BadRequest, json_msg
 from extensions import db, get_current_user_id, get_or_404, limiter
 from models import ChatMessage, ChatSession, Trip
 from services.ai import get_provider
@@ -81,7 +81,7 @@ def delete_session(session_id):
     session = get_or_404(ChatSession, session_id, user_id)
     db.session.delete(session)
     db.session.commit()
-    return jsonify({"ok": True}), 200
+    return json_msg("Session deleted")
 
 
 @chat_bp.route("/chat/sessions/<int:session_id>/messages", methods=["DELETE"])
@@ -92,7 +92,7 @@ def clear_session_messages(session_id):
     ChatMessage.query.filter_by(session_id=session_id).delete()
     session.title = None
     db.session.commit()
-    return jsonify({"ok": True}), 200
+    return json_msg("Messages cleared")
 
 
 @chat_bp.route("/chat/sessions/<int:session_id>/messages", methods=["GET"])
@@ -187,7 +187,7 @@ def log_context():
 
     get_or_404(ChatSession, session_id, user_id)
     save_context_message(session_id, user_id, content)
-    return jsonify({"ok": True}), 200
+    return json_msg("Context logged")
 
 
 # --- Status endpoint ---

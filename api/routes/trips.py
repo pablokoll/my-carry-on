@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from errors import BadRequest, NotFound
+from errors import BadRequest, NotFound, json_msg
 from extensions import db, get_current_user_id, get_or_404
 from models import Trip
 from services.trip_service import get_trips_with_stats
@@ -63,7 +63,7 @@ def delete_trip(trip_id):
     trip = get_or_404(Trip, trip_id, user_id)
     db.session.delete(trip)
     db.session.commit()
-    return jsonify({"message": "Trip deleted"}), 200
+    return json_msg("Trip deleted")
 
 
 @trips_bp.route("/trips/<int:trip_id>/activate", methods=["POST"])

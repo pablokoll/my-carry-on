@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from errors import BadRequest, NotFound
+from errors import BadRequest, NotFound, json_msg
 from extensions import db, get_current_user_id, get_or_404
 from models import Category
 
@@ -52,4 +52,4 @@ def delete_category(category_id):
     category = get_or_404(Category, category_id, user_id)
     db.session.delete(category)
     db.session.commit()
-    return jsonify({"message": "Category deleted"}), 200
+    return json_msg("Category deleted")

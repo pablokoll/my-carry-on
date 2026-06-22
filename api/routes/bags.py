@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy.orm import selectinload
-from errors import BadRequest, Conflict, NotFound
+from errors import BadRequest, Conflict, NotFound, json_msg
 from extensions import db, get_current_user_id, get_or_404
 from models import Bag, Item, Trip, TripBag
 from services.bag_service import duplicate_bag as duplicate_bag_service
@@ -98,7 +98,7 @@ def delete_bag(bag_id):
     bag = get_or_404(Bag, bag_id, user_id)
     db.session.delete(bag)
     db.session.commit()
-    return jsonify({"message": "Bag deleted"}), 200
+    return json_msg("Bag deleted")
 
 
 @bags_bp.route("/trips/<int:trip_id>/bags", methods=["GET"])
@@ -160,4 +160,4 @@ def unassign_bag_from_trip(trip_id, bag_id):
 
     db.session.delete(trip_bag)
     db.session.commit()
-    return jsonify({"message": "Bag unassigned from trip"}), 200
+    return json_msg("Bag unassigned from trip")
