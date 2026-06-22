@@ -3,6 +3,7 @@ from models.user import User
 from models.trip import Trip, Destination, TripBag
 from models.bag import Category, Bag, Item, SubItem
 from models.chat import ChatMessage, ChatSession
+from models.auth import TokenBlocklist, AuthLog
 
 __all__ = [
     "BaseModel",
@@ -16,4 +17,6 @@ __all__ = [
     "SubItem",
     "ChatMessage",
     "ChatSession",
+    "TokenBlocklist",
+    "AuthLog",
 ]
