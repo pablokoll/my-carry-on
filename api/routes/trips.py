@@ -1,9 +1,9 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy.orm import selectinload
 from errors import BadRequest, NotFound
 from extensions import db, get_current_user_id, get_or_404
-from models import Bag, Item, Trip, TripBag
+from models import Trip
+from services.trip_service import get_trips_with_stats
 
 trips_bp = Blueprint("trips", __name__)
 
@@ -13,44 +13,7 @@ trips_bp = Blueprint("trips", __name__)
 def get_trips():
     user_id = get_current_user_id()
     limit = request.args.get("limit", type=int)
-    query = (
-        Trip.query
-        .filter_by(user_id=user_id)
-        .order_by(Trip.is_active.desc(), Trip.start_date.desc())
-        .options(
-            selectinload(Trip.trip_bags)
-            .selectinload(TripBag.bag)
-            .selectinload(Bag.items)
-            .selectinload(Item.sub_items)
-        )
-    )
-    trips = query.limit(limit).all() if limit else query.all()
-    result = []
-    for trip in trips:
-        d = trip.to_dict()
-        bags = []
-        for tb in trip.trip_bags:
-            bag = tb.bag
-            items = bag.items
-            total = 0
-            packed = 0
-            for i in items:
-                if i.sub_items:
-                    for s in i.sub_items:
-                        qty = s.quantity or 1
-                        total += qty
-                        if s.packed:
-                            packed += qty
-                else:
-                    total += i.quantity or 1
-                    if i.packed:
-                        packed += i.quantity or 1
-            bags.append({"id": bag.id, "name": bag.name, "type": bag.type, "items_total": total, "items_packed": packed})
-        d["bags"] = bags
-        d["items_total"] = sum(b["items_total"] for b in bags)
-        d["items_packed"] = sum(b["items_packed"] for b in bags)
-        result.append(d)
-    return jsonify(result), 200
+    return jsonify(get_trips_with_stats(user_id, limit)), 200
 
 
 @trips_bp.route("/trips", methods=["POST"])
