@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy.orm import selectinload
 from errors import BadRequest, NotFound
-from extensions import db, get_current_user_id
+from extensions import db, get_current_user_id, get_or_404
 from models import Bag, Item, Trip, TripBag
 
 trips_bp = Blueprint("trips", __name__)
@@ -45,7 +45,7 @@ def get_trips():
                     total += i.quantity or 1
                     if i.packed:
                         packed += i.quantity or 1
-            bags.append({ "id": bag.id, "name": bag.name, "type": bag.type, "items_total": total, "items_packed": packed })
+            bags.append({"id": bag.id, "name": bag.name, "type": bag.type, "items_total": total, "items_packed": packed})
         d["bags"] = bags
         d["items_total"] = sum(b["items_total"] for b in bags)
         d["items_packed"] = sum(b["items_packed"] for b in bags)
@@ -63,12 +63,7 @@ def create_trip():
     if len(data["name"]) > 255:
         raise BadRequest("name must be 255 characters or less")
 
-    trip = Trip(
-        user_id=user_id,
-        name=data["name"],
-        start_date=data.get("start_date"),
-        end_date=data.get("end_date"),
-    )
+    trip = Trip(user_id=user_id, name=data["name"], start_date=data.get("start_date"), end_date=data.get("end_date"))
     db.session.add(trip)
     db.session.commit()
     return jsonify(trip.to_dict()), 201
@@ -78,9 +73,7 @@ def create_trip():
 @jwt_required()
 def get_trip(trip_id):
     user_id = get_current_user_id()
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
+    trip = get_or_404(Trip, trip_id, user_id)
     return jsonify(trip.to_dict()), 200
 
 
@@ -92,10 +85,7 @@ def update_trip(trip_id):
     if not data:
         raise BadRequest("No data provided")
 
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
-
+    trip = get_or_404(Trip, trip_id, user_id)
     trip.name = data.get("name") or trip.name
     trip.start_date = data.get("start_date") or trip.start_date
     trip.end_date = data.get("end_date") or trip.end_date
@@ -107,10 +97,7 @@ def update_trip(trip_id):
 @jwt_required()
 def delete_trip(trip_id):
     user_id = get_current_user_id()
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
-
+    trip = get_or_404(Trip, trip_id, user_id)
     db.session.delete(trip)
     db.session.commit()
     return jsonify({"message": "Trip deleted"}), 200
@@ -120,13 +107,9 @@ def delete_trip(trip_id):
 @jwt_required()
 def activate_trip(trip_id):
     user_id = get_current_user_id()
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
+    trip = get_or_404(Trip, trip_id, user_id)
 
-    for t in Trip.query.filter_by(user_id=user_id, is_active=True):
-        t.is_active = False
-
+    Trip.query.filter_by(user_id=user_id, is_active=True).update({"is_active": False})
     trip.is_active = True
     db.session.commit()
     return jsonify(trip.to_dict()), 200
@@ -136,10 +119,7 @@ def activate_trip(trip_id):
 @jwt_required()
 def deactivate_trip(trip_id):
     user_id = get_current_user_id()
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
-
+    trip = get_or_404(Trip, trip_id, user_id)
     trip.is_active = False
     db.session.commit()
     return jsonify(trip.to_dict()), 200

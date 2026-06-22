@@ -14,6 +14,30 @@ def get_current_user_id() -> int:
     return int(get_jwt_identity())
 
 
+def get_or_404(model, resource_id: int, user_id: int):
+    """Fetch a resource by id, raise NotFound if missing or not owned by user_id."""
+    from errors import NotFound
+    resource = db.session.get(model, resource_id)
+    if not resource or resource.user_id != user_id:
+        raise NotFound(f"{model.__name__} not found")
+    return resource
+
+
+def get_owned_or_404(model, resource_id: int, user_id: int, owner_attr: str = "user_id"):
+    """Like get_or_404 but traverses a relationship chain to check ownership.
+    owner_attr supports dot notation, e.g. 'bag.user_id' or 'item.bag.user_id'."""
+    from errors import NotFound
+    resource = db.session.get(model, resource_id)
+    if not resource:
+        raise NotFound(f"{model.__name__} not found")
+    obj = resource
+    for attr in owner_attr.split("."):
+        obj = getattr(obj, attr)
+    if obj != user_id:
+        raise NotFound(f"{model.__name__} not found")
+    return resource
+
+
 def register_jwt_callbacks(jwt_instance):
     from models.auth import TokenBlocklist
 

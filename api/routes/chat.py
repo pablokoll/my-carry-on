@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
 from errors import BadRequest, NotFound
-from extensions import db, get_current_user_id, limiter
+from extensions import db, get_current_user_id, get_or_404, limiter
 from models import ChatMessage, ChatSession, Trip
 from services.chat_service import (
     MODEL,
@@ -33,9 +33,7 @@ def list_sessions():
     if not trip_id:
         raise BadRequest("trip_id is required")
 
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
+    get_or_404(Trip, trip_id, user_id)
 
     sessions = (
         ChatSession.query
@@ -71,9 +69,7 @@ def create_session():
     if not trip_id:
         raise BadRequest("trip_id is required")
 
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
+    get_or_404(Trip, trip_id, user_id)
 
     session = ChatSession(trip_id=trip_id, user_id=user_id)
     db.session.add(session)
@@ -86,10 +82,7 @@ def create_session():
 @jwt_required()
 def delete_session(session_id):
     user_id = get_current_user_id()
-    session = ChatSession.query.get(session_id)
-    if not session or session.user_id != user_id:
-        raise NotFound("Session not found")
-
+    session = get_or_404(ChatSession, session_id, user_id)
     db.session.delete(session)
     db.session.commit()
     return jsonify({"ok": True}), 200
@@ -99,10 +92,7 @@ def delete_session(session_id):
 @jwt_required()
 def clear_session_messages(session_id):
     user_id = get_current_user_id()
-    session = ChatSession.query.get(session_id)
-    if not session or session.user_id != user_id:
-        raise NotFound("Session not found")
-
+    session = get_or_404(ChatSession, session_id, user_id)
     ChatMessage.query.filter_by(session_id=session_id).delete()
     session.title = None
     db.session.commit()
@@ -113,9 +103,7 @@ def clear_session_messages(session_id):
 @jwt_required()
 def get_session_messages(session_id):
     user_id = get_current_user_id()
-    session = ChatSession.query.get(session_id)
-    if not session or session.user_id != user_id:
-        raise NotFound("Session not found")
+    session = get_or_404(ChatSession, session_id, user_id)
 
     messages = (
         ChatMessage.query
@@ -145,10 +133,7 @@ def chat():
     if not messages or not isinstance(messages, list):
         raise BadRequest("messages is required")
 
-    session = ChatSession.query.get(session_id)
-    if not session or session.user_id != user_id:
-        raise NotFound("Session not found")
-
+    session = get_or_404(ChatSession, session_id, user_id)
     trip = session.trip
     system_prompt = build_system_prompt(trip)
     db_history = get_history(session_id, user_id)
@@ -229,10 +214,7 @@ def log_context():
     if not session_id or not content:
         raise BadRequest("session_id and content are required")
 
-    session = ChatSession.query.get(session_id)
-    if not session or session.user_id != user_id:
-        raise NotFound("Session not found")
-
+    session = get_or_404(ChatSession, session_id, user_id)
     save_context_message(session_id, user_id, content)
     return jsonify({"ok": True}), 200
 

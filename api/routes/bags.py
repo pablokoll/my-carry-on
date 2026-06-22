@@ -2,10 +2,12 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy.orm import selectinload
 from errors import BadRequest, Conflict, NotFound
-from extensions import db, get_current_user_id
+from extensions import db, get_current_user_id, get_or_404
 from models import Bag, Item, SubItem, Trip, TripBag
 
 bags_bp = Blueprint("bags", __name__)
+
+ALLOWED_BAG_TYPES = {"carry-on", "luggage", "backpack", "handbag", "toiletry bag", "worn", "other"}
 
 
 @bags_bp.route("/bags", methods=["GET"])
@@ -14,9 +16,6 @@ def get_bags():
     user_id = get_current_user_id()
     bags = Bag.query.filter_by(user_id=user_id).all()
     return jsonify([bag.to_dict() for bag in bags]), 200
-
-
-ALLOWED_BAG_TYPES = {"carry-on", "luggage", "backpack", "handbag", "toiletry bag", "worn", "other"}
 
 
 @bags_bp.route("/bags", methods=["POST"])
@@ -64,9 +63,7 @@ def update_bag(bag_id):
     if not data:
         raise BadRequest("No data provided")
 
-    bag = Bag.query.get(bag_id)
-    if not bag or bag.user_id != user_id:
-        raise NotFound("Bag not found")
+    bag = get_or_404(Bag, bag_id, user_id)
 
     new_name = data.get("name")
     new_type = data.get("type")
@@ -86,30 +83,18 @@ def update_bag(bag_id):
 @jwt_required()
 def duplicate_bag(bag_id):
     user_id = get_current_user_id()
-    bag = Bag.query.get(bag_id)
-    if not bag or bag.user_id != user_id:
-        raise NotFound("Bag not found")
+    bag = get_or_404(Bag, bag_id, user_id)
 
     new_bag = Bag(user_id=user_id, name=f"{bag.name} (copy)", type=bag.type)
     db.session.add(new_bag)
     db.session.flush()
 
     for item in bag.items:
-        new_item = Item(
-            bag_id=new_bag.id,
-            name=item.name,
-            category_id=item.category_id,
-            packed=False,
-        )
+        new_item = Item(bag_id=new_bag.id, name=item.name, category_id=item.category_id, packed=False)
         db.session.add(new_item)
         db.session.flush()
         for sub in item.sub_items:
-            db.session.add(SubItem(
-                item_id=new_item.id,
-                name=sub.name,
-                quantity=sub.quantity,
-                packed=False,
-            ))
+            db.session.add(SubItem(item_id=new_item.id, name=sub.name, quantity=sub.quantity, packed=False))
 
     db.session.commit()
     result = new_bag.to_dict()
@@ -121,10 +106,7 @@ def duplicate_bag(bag_id):
 @jwt_required()
 def delete_bag(bag_id):
     user_id = get_current_user_id()
-    bag = Bag.query.get(bag_id)
-    if not bag or bag.user_id != user_id:
-        raise NotFound("Bag not found")
-
+    bag = get_or_404(Bag, bag_id, user_id)
     db.session.delete(bag)
     db.session.commit()
     return jsonify({"message": "Bag deleted"}), 200
@@ -164,13 +146,8 @@ def assign_bag_to_trip(trip_id):
     if not data or not data.get("bag_id"):
         raise BadRequest("bag_id is required")
 
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
-
-    bag = Bag.query.get(data["bag_id"])
-    if not bag or bag.user_id != user_id:
-        raise NotFound("Bag not found")
+    trip = get_or_404(Trip, trip_id, user_id)
+    bag = get_or_404(Bag, data["bag_id"], user_id)
 
     if TripBag.query.filter_by(trip_id=trip_id, bag_id=bag.id).first():
         raise Conflict("Bag already assigned to this trip")
@@ -185,14 +162,8 @@ def assign_bag_to_trip(trip_id):
 @jwt_required()
 def unassign_bag_from_trip(trip_id, bag_id):
     user_id = get_current_user_id()
-
-    trip = Trip.query.get(trip_id)
-    if not trip or trip.user_id != user_id:
-        raise NotFound("Trip not found")
-
-    bag = Bag.query.get(bag_id)
-    if not bag or bag.user_id != user_id:
-        raise NotFound("Bag not found")
+    get_or_404(Trip, trip_id, user_id)
+    get_or_404(Bag, bag_id, user_id)
 
     trip_bag = TripBag.query.filter_by(trip_id=trip_id, bag_id=bag_id).first()
     if not trip_bag:
