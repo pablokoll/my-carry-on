@@ -16,58 +16,8 @@ import { FormModal, Field } from '@/components/ui/form-modal'
 import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
 import { BagItemsTable, type Item, type Category } from '@/components/bag-items-table'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
-
-const btnPrimary: React.CSSProperties = {
-  background: 'var(--primary)',
-  color: 'var(--primary-foreground)',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '8px 16px',
-  fontSize: '14px',
-  fontWeight: 500,
-  cursor: 'pointer',
-}
-
-const btnDestructive: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--destructive)',
-  cursor: 'pointer',
-  fontSize: '13px',
-  padding: '4px 8px',
-}
-
-const sectionHeader: React.CSSProperties = {
-  fontSize: '16px',
-  fontWeight: 600,
-  color: 'var(--foreground)',
-  marginBottom: '12px',
-  marginTop: 0,
-}
-
-const rowStyle: React.CSSProperties = {
-  background: 'var(--bg-surface)',
-  borderRadius: '8px',
-  padding: '12px 16px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-}
-
-function TypeBadge({ type }: { type: string }) {
-  return (
-    <span style={{
-      background: 'rgba(74,123,181,0.1)',
-      color: 'var(--primary)',
-      borderRadius: '999px',
-      padding: '2px 10px',
-      fontSize: '12px',
-      fontWeight: 500,
-    }}>
-      {type}
-    </span>
-  )
-}
+import { TypeBadge } from '@/components/ui/type-badge'
+import { btnPrimary, btnDestructive, sectionHeader, rowStyle } from '@/lib/styles'
 
 export default function TripPage() {
   const { id } = useParams<{ id: string }>()
@@ -125,21 +75,6 @@ export default function TripPage() {
     if (isError) { clearTokens(); router.replace('/login') }
   }, [isError, router])
 
-  // Invalidate tripBags when chat mutates a bag
-  useEffect(() => {
-    function onBagMutated(e: Event) {
-      const bagId = (e as CustomEvent<{ bag_id: number | null }>).detail?.bag_id
-      if (bagId != null) {
-        qc.invalidateQueries({ queryKey: keys.bag(bagId) })
-        qc.invalidateQueries({ queryKey: keys.tripBags(id) })
-      } else {
-        qc.invalidateQueries({ queryKey: keys.tripBags(id) })
-        qc.invalidateQueries({ queryKey: keys.bags() })
-      }
-    }
-    window.addEventListener('chat:bag-mutated', onBagMutated)
-    return () => window.removeEventListener('chat:bag-mutated', onBagMutated)
-  }, [id, qc])
 
   const assignedBags = tripBags.map((tb: BagWithItems) => ({ id: tb.id, name: tb.name, type: tb.type }))
   const bagItemsMap: Record<number, Item[]> = {}

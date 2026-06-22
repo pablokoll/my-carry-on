@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { useCreateBag } from "@/lib/queries";
 import { FormModal, Field } from "@/components/ui/form-modal";
+import { BAG_TYPES, type BagType } from "@/lib/constants";
 
 export interface Bag {
   id: number;
   name: string;
   type: string;
 }
-
-const BAG_TYPES = ["carry-on", "luggage", "backpack", "handbag", "toiletry bag", "worn", "other"] as const;
 
 interface Props {
   open: boolean;
@@ -20,7 +19,7 @@ interface Props {
 
 export function CreateBagModal({ open, onClose, onCreated }: Props) {
   const [name, setName] = useState("");
-  const [type, setType] = useState<(typeof BAG_TYPES)[number]>("carry-on");
+  const [type, setType] = useState<BagType>("carry-on");
   const [nameError, setNameError] = useState("");
   const [formError, setFormError] = useState("");
   const createBag = useCreateBag();
@@ -75,7 +74,7 @@ export function CreateBagModal({ open, onClose, onCreated }: Props) {
         <select
           value={type}
           onChange={(e) =>
-            setType(e.target.value as (typeof BAG_TYPES)[number])
+            setType(e.target.value as BagType)
           }
           style={{ cursor: "pointer" }}
         >
