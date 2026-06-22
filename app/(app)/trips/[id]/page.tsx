@@ -17,7 +17,10 @@ import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
 import { BagItemsTable, type Item, type Category } from '@/components/bag-items-table'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { TypeBadge } from '@/components/ui/type-badge'
-import { btnPrimary, btnDestructive, sectionHeader, rowStyle } from '@/lib/styles'
+import { btnPrimary, sectionHeader, rowStyle } from '@/lib/styles'
+import { useTripEditForm } from './use-trip-edit'
+import { useDestinationForm } from './use-destination-form'
+import { useBagAssignment } from './use-bag-assignment'
 
 export default function TripPage() {
   const { id } = useParams<{ id: string }>()
@@ -39,128 +42,25 @@ export default function TripPage() {
   const assignBag = useAssignBag(id)
   const unassignBag = useUnassignBag(id)
 
-  // edit trip form
-  const [editOpen, setEditOpen] = useState(false)
-  const [editName, setEditName] = useState('')
-  const [editStart, setEditStart] = useState('')
-  const [editEnd, setEditEnd] = useState('')
-  const [editNameErr, setEditNameErr] = useState('')
-  const [editErr, setEditErr] = useState('')
+  const assignedBags = tripBags.map((tb: BagWithItems) => ({ id: tb.id, name: tb.name, type: tb.type }))
+  const bagItemsMap: Record<number, Item[]> = {}
+  tripBags.forEach((tb: BagWithItems) => { bagItemsMap[tb.id] = tb.items ?? [] })
+  const unassignedBags = allBags.filter((b: Bag) => !assignedBags.find((a: { id: number }) => a.id === b.id))
 
-  // destination form
-  const [destOpen, setDestOpen] = useState(false)
-  const [destCity, setDestCity] = useState('')
-  const [destCountry, setDestCountry] = useState('')
-  const [destArrival, setDestArrival] = useState('')
-  const [destDeparture, setDestDeparture] = useState('')
-  const [destCityErr, setDestCityErr] = useState('')
-  const [destCountryErr, setDestCountryErr] = useState('')
-  const [destErr, setDestErr] = useState('')
-  const [editingDest, setEditingDest] = useState<Destination | null>(null)
+  const editForm = useTripEditForm(trip, updateTrip)
+  const destForm = useDestinationForm(addDest, updateDest)
+  const bagForm = useBagAssignment(unassignedBags, assignBag)
 
-  // bag assignment
-  const [bagOpen, setBagOpen] = useState(false)
-  const [createBagOpen, setCreateBagOpen] = useState(false)
-  const [selectedBagId, setSelectedBagId] = useState('')
-  const [bagErr, setBagErr] = useState('')
-  const [expandedBags, setExpandedBags] = useState<Set<number>>(new Set())
-
-  // kebab + confirms
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmTrip, setConfirmTrip] = useState(false)
   const [confirmDestId, setConfirmDestId] = useState<number | null>(null)
   const [confirmBagId, setConfirmBagId] = useState<number | null>(null)
+  const [expandedBags, setExpandedBags] = useState<Set<number>>(new Set())
+  const [createBagOpen, setCreateBagOpen] = useState(false)
 
   useEffect(() => {
     if (isError) { clearTokens(); router.replace('/login') }
   }, [isError, router])
-
-
-  const assignedBags = tripBags.map((tb: BagWithItems) => ({ id: tb.id, name: tb.name, type: tb.type }))
-  const bagItemsMap: Record<number, Item[]> = {}
-  tripBags.forEach((tb: BagWithItems) => { bagItemsMap[tb.id] = tb.items ?? [] })
-
-  const unassignedBags = allBags.filter((b: Bag) => !assignedBags.find((a: { id: number }) => a.id === b.id))
-
-  // --- edit trip ---
-  function openEdit() {
-    if (!trip) return
-    setEditName(trip.name)
-    setEditStart(trip.start_date ?? '')
-    setEditEnd(trip.end_date ?? '')
-    setEditNameErr(''); setEditErr('')
-    setEditOpen(true)
-  }
-
-  async function handleEditTrip() {
-    if (!editName.trim()) { setEditNameErr('Name is required'); return }
-    setEditNameErr(''); setEditErr('')
-    try {
-      await updateTrip.mutateAsync({ name: editName.trim(), start_date: editStart || null, end_date: editEnd || null })
-      setEditOpen(false)
-    } catch (e) {
-      setEditErr(e instanceof Error ? e.message : 'Failed to update trip')
-    }
-  }
-
-  // --- destinations ---
-  function closeDestModal() {
-    setDestOpen(false); setEditingDest(null)
-    setDestCity(''); setDestCountry(''); setDestArrival(''); setDestDeparture('')
-    setDestCityErr(''); setDestCountryErr(''); setDestErr('')
-  }
-
-  function openEditDest(dest: Destination) {
-    setEditingDest(dest)
-    setDestCity(dest.city); setDestCountry(dest.country)
-    setDestArrival(dest.arrival_date ?? ''); setDestDeparture(dest.departure_date ?? '')
-    setDestCityErr(''); setDestCountryErr(''); setDestErr('')
-    setDestOpen(true)
-  }
-
-  async function handleAddDestination() {
-    let valid = true
-    if (!destCity.trim()) { setDestCityErr('City is required'); valid = false } else setDestCityErr('')
-    if (!destCountry.trim()) { setDestCountryErr('Country is required'); valid = false } else setDestCountryErr('')
-    if (!valid) return
-    setDestErr('')
-    const data = { city: destCity.trim(), country: destCountry.trim(), arrival_date: destArrival || null, departure_date: destDeparture || null }
-    try {
-      if (editingDest) {
-        await updateDest.mutateAsync({ destId: editingDest.id, data })
-      } else {
-        await addDest.mutateAsync(data)
-      }
-      closeDestModal()
-    } catch (e) {
-      setDestErr(e instanceof Error ? e.message : 'Failed to save destination')
-    }
-  }
-
-  // --- bags ---
-  function openBagModal() {
-    const first = unassignedBags[0]
-    setSelectedBagId(first ? String(first.id) : '')
-    setBagErr(''); setBagOpen(true)
-  }
-
-  async function handleAssignBag() {
-    if (!selectedBagId) return
-    setBagErr('')
-    try {
-      await assignBag.mutateAsync(Number(selectedBagId))
-      setBagOpen(false)
-    } catch (e) {
-      setBagErr(e instanceof Error ? e.message : 'Failed to assign bag')
-    }
-  }
-
-  async function handleBagCreated(bag: Bag) {
-    try {
-      await assignBag.mutateAsync(bag.id)
-    } catch { /* silent */ }
-    setCreateBagOpen(false)
-  }
 
   if (isLoading) return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
   if (!trip) return <p style={{ color: 'var(--destructive)', textAlign: 'center', paddingTop: '48px' }}>Trip not found.</p>
@@ -194,7 +94,7 @@ export default function TripPage() {
                 <button onClick={() => { toggleActive.mutate(trip.is_active); setMenuOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}>
                   {trip.is_active ? 'Deactivate' : 'Active'}
                 </button>
-                <button onClick={() => { openEdit(); setMenuOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--foreground)', borderTop: '1px solid var(--border)' }}>
+                <button onClick={() => { editForm.openEdit(); setMenuOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--foreground)', borderTop: '1px solid var(--border)' }}>
                   Edit
                 </button>
                 <button onClick={() => { setMenuOpen(false); setConfirmTrip(true) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--destructive)', borderTop: '1px solid var(--border)' }}>
@@ -210,7 +110,7 @@ export default function TripPage() {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <h3 style={sectionHeader}>Destinations</h3>
-          <button style={{ ...btnPrimary, fontSize: '13px', padding: '5px 12px', height: 'auto' }} onClick={() => setDestOpen(true)}>+ Add</button>
+          <button style={{ ...btnPrimary, fontSize: '13px', padding: '5px 12px', height: 'auto' }} onClick={destForm.openAdd}>+ Add</button>
         </div>
         {destLoading ? (
           <p style={{ color: 'var(--fg-muted)', fontSize: '14px' }}>Loading…</p>
@@ -229,7 +129,7 @@ export default function TripPage() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                  <button onClick={() => openEditDest(dest)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '13px', padding: '4px 8px' }}>✎</button>
+                  <button onClick={() => destForm.openEdit(dest)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '13px', padding: '4px 8px' }}>✎</button>
                   <button onClick={() => setConfirmDestId(dest.id)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '16px', lineHeight: 1, padding: '4px 6px' }}>×</button>
                 </div>
               </div>
@@ -244,7 +144,7 @@ export default function TripPage() {
           <h3 style={sectionHeader}>Bags</h3>
           <div style={{ display: 'flex', gap: '6px' }}>
             {unassignedBags.length > 0 && (
-              <button style={{ ...btnPrimary, background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', fontSize: '13px', padding: '5px 12px', height: 'auto' }} onClick={openBagModal}>
+              <button style={{ ...btnPrimary, background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', fontSize: '13px', padding: '5px 12px', height: 'auto' }} onClick={bagForm.openModal}>
                 Assign
               </button>
             )}
@@ -316,65 +216,69 @@ export default function TripPage() {
 
       {/* Edit trip modal */}
       <FormModal
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
+        open={editForm.open}
+        onClose={() => editForm.setOpen(false)}
         title="Edit trip"
-        onSubmit={handleEditTrip}
-        submitting={updateTrip.isPending}
+        onSubmit={editForm.handleSubmit}
+        submitting={editForm.isPending}
         submitLabel="Save"
-        error={editErr}
+        error={editForm.err}
       >
-        <Field label="Name" error={editNameErr}>
-          <input type="text" autoFocus value={editName} onChange={e => setEditName(e.target.value)} />
+        <Field label="Name" error={editForm.nameErr}>
+          <input type="text" autoFocus value={editForm.name} onChange={e => editForm.setName(e.target.value)} />
         </Field>
         <Field label="Start date">
-          <input type="date" value={editStart} onChange={e => setEditStart(e.target.value)} />
+          <input type="date" value={editForm.start} onChange={e => editForm.setStart(e.target.value)} />
         </Field>
         <Field label="End date">
-          <input type="date" value={editEnd} onChange={e => setEditEnd(e.target.value)} />
+          <input type="date" value={editForm.end} onChange={e => editForm.setEnd(e.target.value)} />
         </Field>
       </FormModal>
 
       {/* Add/edit destination modal */}
       <FormModal
-        open={destOpen}
-        onClose={closeDestModal}
-        title={editingDest ? 'Edit destination' : 'Add destination'}
-        onSubmit={handleAddDestination}
-        submitting={addDest.isPending || updateDest.isPending}
-        submitLabel={editingDest ? 'Save' : 'Add'}
-        error={destErr}
+        open={destForm.open}
+        onClose={destForm.close}
+        title={destForm.editing ? 'Edit destination' : 'Add destination'}
+        onSubmit={destForm.handleSubmit}
+        submitting={destForm.isPending}
+        submitLabel={destForm.editing ? 'Save' : 'Add'}
+        error={destForm.err}
       >
-        <Field label="City" error={destCityErr}>
-          <input type="text" placeholder="e.g. Paris" autoFocus value={destCity} onChange={e => setDestCity(e.target.value)} />
+        <Field label="City" error={destForm.cityErr}>
+          <input type="text" placeholder="e.g. Paris" autoFocus value={destForm.city} onChange={e => destForm.setCity(e.target.value)} />
         </Field>
-        <Field label="Country" error={destCountryErr}>
-          <input type="text" placeholder="e.g. France" value={destCountry} onChange={e => setDestCountry(e.target.value)} />
+        <Field label="Country" error={destForm.countryErr}>
+          <input type="text" placeholder="e.g. France" value={destForm.country} onChange={e => destForm.setCountry(e.target.value)} />
         </Field>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
           <Field label="Arrival">
-            <input type="date" value={destArrival} onChange={e => setDestArrival(e.target.value)} />
+            <input type="date" value={destForm.arrival} onChange={e => destForm.setArrival(e.target.value)} />
           </Field>
           <Field label="Departure">
-            <input type="date" value={destDeparture} onChange={e => setDestDeparture(e.target.value)} />
+            <input type="date" value={destForm.departure} onChange={e => destForm.setDeparture(e.target.value)} />
           </Field>
         </div>
       </FormModal>
 
-      <CreateBagModal open={createBagOpen} onClose={() => setCreateBagOpen(false)} onCreated={handleBagCreated} />
+      <CreateBagModal
+        open={createBagOpen}
+        onClose={() => setCreateBagOpen(false)}
+        onCreated={async (bag) => { await bagForm.handleBagCreated(bag); setCreateBagOpen(false) }}
+      />
 
       {/* Assign bag modal */}
       <FormModal
-        open={bagOpen}
-        onClose={() => setBagOpen(false)}
+        open={bagForm.open}
+        onClose={() => bagForm.setOpen(false)}
         title="Assign bag"
-        onSubmit={handleAssignBag}
-        submitting={assignBag.isPending}
+        onSubmit={bagForm.handleAssign}
+        submitting={bagForm.isPending}
         submitLabel="Assign"
-        error={bagErr}
+        error={bagForm.err}
       >
         <Field label="Bag">
-          <select value={selectedBagId} onChange={e => setSelectedBagId(e.target.value)} style={{ cursor: 'pointer' }}>
+          <select value={bagForm.selectedId} onChange={e => bagForm.setSelectedId(e.target.value)} style={{ cursor: 'pointer' }}>
             {unassignedBags.map((b: Bag) => (
               <option key={b.id} value={String(b.id)}>{b.name} ({b.type})</option>
             ))}
