@@ -75,21 +75,6 @@ export default function TripPage() {
     if (isError) { clearTokens(); router.replace('/login') }
   }, [isError, router])
 
-  // Invalidate tripBags when chat mutates a bag
-  useEffect(() => {
-    function onBagMutated(e: Event) {
-      const bagId = (e as CustomEvent<{ bag_id: number | null }>).detail?.bag_id
-      if (bagId != null) {
-        qc.invalidateQueries({ queryKey: keys.bag(bagId) })
-        qc.invalidateQueries({ queryKey: keys.tripBags(id) })
-      } else {
-        qc.invalidateQueries({ queryKey: keys.tripBags(id) })
-        qc.invalidateQueries({ queryKey: keys.bags() })
-      }
-    }
-    window.addEventListener('chat:bag-mutated', onBagMutated)
-    return () => window.removeEventListener('chat:bag-mutated', onBagMutated)
-  }, [id, qc])
 
   const assignedBags = tripBags.map((tb: BagWithItems) => ({ id: tb.id, name: tb.name, type: tb.type }))
   const bagItemsMap: Record<number, Item[]> = {}
