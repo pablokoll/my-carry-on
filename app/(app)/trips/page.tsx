@@ -6,17 +6,7 @@ import Link from 'next/link'
 import { clearTokens } from '@/lib/api'
 import { useTrips, type Trip } from '@/lib/queries'
 import { CreateTripModal } from '@/components/create-trip-modal'
-
-const btnPrimary: React.CSSProperties = {
-  background: 'var(--primary)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '8px 16px',
-  fontSize: '14px',
-  fontWeight: 500,
-  cursor: 'pointer',
-}
+import { btnPrimary } from '@/lib/styles'
 
 export default function TripsPage() {
   const router = useRouter()

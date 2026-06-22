@@ -16,6 +16,7 @@ import {
   type ExpandedState,
 } from '@tanstack/react-table'
 import { api } from '@/lib/api'
+import { btnPrimary, btnSecondary, btnGhost, btnLink, catSelect } from '@/lib/styles'
 
 export interface Category {
   id: number
@@ -127,62 +128,6 @@ const qtyInput: React.CSSProperties = {
   color: 'var(--foreground)',
   outline: 'none',
   textAlign: 'center',
-}
-
-const catSelect: React.CSSProperties = {
-  width: '100%',
-  height: '36px',
-  padding: '0 8px',
-  fontSize: '13px',
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '6px',
-  color: 'var(--foreground)',
-  outline: 'none',
-  cursor: 'pointer',
-}
-
-const btnPrimary: React.CSSProperties = {
-  height: '36px',
-  padding: '0 18px',
-  background: 'var(--primary)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
-  fontSize: '14px',
-  fontWeight: 600,
-  cursor: 'pointer',
-}
-
-const btnSecondary: React.CSSProperties = {
-  height: '36px',
-  padding: '0 18px',
-  background: 'transparent',
-  color: 'var(--foreground)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
-  fontSize: '14px',
-  fontWeight: 500,
-  cursor: 'pointer',
-}
-
-const btnGhost: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--fg-muted)',
-  cursor: 'pointer',
-  fontSize: '13px',
-  padding: '4px 8px',
-}
-
-const btnLink: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--primary)',
-  cursor: 'pointer',
-  fontSize: '13px',
-  padding: '4px 0',
-  fontWeight: 500,
 }
 
 // ── Component ────────────────────────────────────────────────────────────────

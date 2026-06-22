@@ -5,41 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useAllBags, useDeleteBag, useDuplicateBag } from '@/lib/queries'
 import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
-
-const btnPrimary: React.CSSProperties = {
-  background: 'var(--primary)',
-  color: 'var(--primary-foreground)',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '8px 16px',
-  fontSize: '14px',
-  fontWeight: 500,
-  cursor: 'pointer',
-}
-
-const btnDestructive: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--destructive)',
-  cursor: 'pointer',
-  fontSize: '13px',
-  padding: '4px 8px',
-}
-
-function TypeBadge({ type }: { type: string }) {
-  return (
-    <span style={{
-      background: 'rgba(74,123,181,0.1)',
-      color: 'var(--primary)',
-      borderRadius: '999px',
-      padding: '2px 10px',
-      fontSize: '12px',
-      fontWeight: 500,
-    }}>
-      {type}
-    </span>
-  )
-}
+import { TypeBadge } from '@/components/ui/type-badge'
+import { btnPrimary, btnDestructive } from '@/lib/styles'
 
 export default function BagsPage() {
   const router = useRouter()
