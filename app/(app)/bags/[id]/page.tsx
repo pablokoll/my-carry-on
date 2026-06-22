@@ -6,8 +6,7 @@ import { clearTokens } from '@/lib/api'
 import { useBagDetail, useUpdateBag, useCategories } from '@/lib/queries'
 import { BagItemsTable, type Category } from '@/components/bag-items-table'
 import { FormModal, Field } from '@/components/ui/form-modal'
-
-const BAG_TYPES = ['Backpack', 'Carry-on', 'Checked', 'Personal item', 'Duffel', 'Tote', 'Other']
+import { BAG_TYPES } from '@/lib/constants'
 
 export default function BagDetailPage() {
   const { id } = useParams<{ id: string }>()
