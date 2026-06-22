@@ -3,7 +3,8 @@ from flask_jwt_extended import jwt_required
 from sqlalchemy.orm import selectinload
 from errors import BadRequest, Conflict, NotFound
 from extensions import db, get_current_user_id, get_or_404
-from models import Bag, Item, SubItem, Trip, TripBag
+from models import Bag, Item, Trip, TripBag
+from services.bag_service import duplicate_bag as duplicate_bag_service
 
 bags_bp = Blueprint("bags", __name__)
 
@@ -84,19 +85,7 @@ def update_bag(bag_id):
 def duplicate_bag(bag_id):
     user_id = get_current_user_id()
     bag = get_or_404(Bag, bag_id, user_id)
-
-    new_bag = Bag(user_id=user_id, name=f"{bag.name} (copy)", type=bag.type)
-    db.session.add(new_bag)
-    db.session.flush()
-
-    for item in bag.items:
-        new_item = Item(bag_id=new_bag.id, name=item.name, category_id=item.category_id, packed=False)
-        db.session.add(new_item)
-        db.session.flush()
-        for sub in item.sub_items:
-            db.session.add(SubItem(item_id=new_item.id, name=sub.name, quantity=sub.quantity, packed=False))
-
-    db.session.commit()
+    new_bag = duplicate_bag_service(bag, user_id)
     result = new_bag.to_dict()
     result["items"] = [i.to_dict() for i in new_bag.items]
     return jsonify(result), 201
