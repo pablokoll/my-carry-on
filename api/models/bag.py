@@ -1,45 +1,53 @@
-from extensions import db
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlalchemy import Boolean, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from models.base import BaseModel
+
+if TYPE_CHECKING:
+    from models.trip import TripBag
+    from models.user import User
 
 
 class Category(BaseModel):
     __tablename__ = "categories"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    name = db.Column(db.String(100), nullable=False)
-    is_default = db.Column(db.Boolean, default=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    user = db.relationship("User", back_populates="categories")
-    items = db.relationship("Item", back_populates="category", lazy=True)
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="categories")
+    items: Mapped[List["Item"]] = relationship("Item", back_populates="category", lazy=True)
 
 
 class Bag(BaseModel):
     __tablename__ = "bags"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    name = db.Column(db.String(255), nullable=False)
-    type = db.Column(db.String(100), nullable=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
-    user = db.relationship("User", back_populates="bags")
-    items = db.relationship("Item", back_populates="bag", lazy=True, cascade="all, delete-orphan")
-    trip_bags = db.relationship("TripBag", back_populates="bag", lazy=True, cascade="all, delete-orphan")
+    user: Mapped["User"] = relationship("User", back_populates="bags")
+    items: Mapped[List["Item"]] = relationship("Item", back_populates="bag", lazy=True, cascade="all, delete-orphan")
+    trip_bags: Mapped[List["TripBag"]] = relationship("TripBag", back_populates="bag", lazy=True, cascade="all, delete-orphan")
 
 
 class Item(BaseModel):
     __tablename__ = "items"
 
-    id = db.Column(db.Integer, primary_key=True)
-    bag_id = db.Column(db.Integer, db.ForeignKey("bags.id"), nullable=False)
-    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=True)
-    name = db.Column(db.String(255), nullable=False)
-    quantity = db.Column(db.Integer, default=1)
-    packed = db.Column(db.Boolean, default=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    bag_id: Mapped[int] = mapped_column(ForeignKey("bags.id"), nullable=False)
+    category_id: Mapped[Optional[int]] = mapped_column(ForeignKey("categories.id"), nullable=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    packed: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    bag = db.relationship("Bag", back_populates="items")
-    category = db.relationship("Category", back_populates="items")
-    sub_items = db.relationship("SubItem", back_populates="item", lazy=True, cascade="all, delete-orphan")
+    bag: Mapped["Bag"] = relationship("Bag", back_populates="items")
+    category: Mapped[Optional["Category"]] = relationship("Category", back_populates="items")
+    sub_items: Mapped[List["SubItem"]] = relationship("SubItem", back_populates="item", lazy=True, cascade="all, delete-orphan")
 
     def to_dict(self, include_subs: bool = True):
         d = super().to_dict()
@@ -56,13 +64,13 @@ class Item(BaseModel):
 class SubItem(BaseModel):
     __tablename__ = "sub_items"
 
-    id = db.Column(db.Integer, primary_key=True)
-    item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False)
-    name = db.Column(db.String(255), nullable=False)
-    quantity = db.Column(db.Integer, default=1)
-    packed = db.Column(db.Boolean, default=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    packed: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    item = db.relationship("Item", back_populates="sub_items")
+    item: Mapped["Item"] = relationship("Item", back_populates="sub_items")
 
     def to_dict(self):
         d = super().to_dict()

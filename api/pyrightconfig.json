@@ -1,0 +1,6 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "exclude": ["build/", ".venv/", "__pycache__/", ".vercel/", "migrations/"],
+  "reportCallIssue": "none"
+}

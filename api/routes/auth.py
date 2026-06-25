@@ -78,6 +78,8 @@ def me():
 
     user_id = get_current_user_id()
     user = User.query.get(user_id)
+    if not user:
+        raise Unauthorized("User not found")
 
     trips = Trip.query.filter_by(user_id=user_id).all()
     trip_count = len(trips)

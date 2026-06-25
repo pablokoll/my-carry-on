@@ -1,5 +1,5 @@
 import os
-from datetime import date, datetime, timezone
+from datetime import date
 
 from google import genai
 
@@ -8,7 +8,7 @@ from services.chat_service import parse_reply
 
 MODEL = "gemini-2.5-flash-lite"
 
-RPD_LIMIT = int(os.environ.get("GEMINI_RPD_LIMIT", "18"))
+RPD_LIMIT = int(os.environ.get("GEMINI_RPD_LIMIT", "20"))
 
 
 class GeminiProvider(AIProvider):
@@ -17,12 +17,19 @@ class GeminiProvider(AIProvider):
         self._rpd_count: int = 0
         self._rpd_date: date | None = None
 
-    def send_message(self, history: list[dict], system_prompt: str, user_message: str) -> AIResponse:
+    def send_message(
+        self, history: list[dict], system_prompt: str, user_message: str
+    ) -> AIResponse:
         from google.genai.errors import ClientError
 
         full_history = [
             {"role": "user", "parts": [{"text": system_prompt}]},
-            {"role": "model", "parts": [{"text": "Understood! I'm ready to help pack for this trip."}]},
+            {
+                "role": "model",
+                "parts": [
+                    {"text": "Understood! I'm ready to help pack for this trip."}
+                ],
+            },
             *history,
         ]
 
@@ -38,7 +45,7 @@ class GeminiProvider(AIProvider):
                 raise ProviderRateLimitError(wait_seconds=wait_seconds)
             raise
 
-        raw = response.text or response.candidates[0].content.parts[0].text
+        raw = response.text or (response.candidates[0].content.parts[0].text if response.candidates else "") or ""  # type: ignore[index,union-attr]
         reply, suggestions = parse_reply(raw)
         return AIResponse(reply=reply, suggestions=suggestions)
 
@@ -55,7 +62,9 @@ class GeminiProvider(AIProvider):
     def get_rate_limit_status(self) -> RateLimitStatus:
         today = date.today()
         count = self._rpd_count if self._rpd_date == today else 0
-        return RateLimitStatus(used=count, limit=RPD_LIMIT, remaining=max(0, RPD_LIMIT - count))
+        return RateLimitStatus(
+            used=count, limit=RPD_LIMIT, remaining=max(0, RPD_LIMIT - count)
+        )
 
     def summarize(self, text: str) -> str:
         result = self._client.models.generate_content(
@@ -65,7 +74,7 @@ class GeminiProvider(AIProvider):
                 f"item suggestions, and any items the user decided to pack:\n\n{text}"
             ),
         )
-        return result.text
+        return result.text or ""
 
     def generate_title(self, first_user_msg: str, first_model_reply: str) -> str:
         try:
@@ -77,7 +86,7 @@ class GeminiProvider(AIProvider):
                     f"Reply with only the title, no quotes."
                 ),
             )
-            return result.text.strip()
+            return (result.text or "").strip()
         except Exception:
             return "Packing Session"
 

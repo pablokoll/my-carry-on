@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from extensions import db
 from models import ChatMessage, ChatSession
-from services.chat_service import build_gemini_history, get_history, save_messages
+from services.chat_service import get_history
 
 COMPACT_THRESHOLD = 30
 MESSAGES_KEPT_AFTER_COMPACT = 10

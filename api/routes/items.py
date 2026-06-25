@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from errors import BadRequest, NotFound, json_msg
+from errors import BadRequest, json_msg
 from extensions import db, get_current_user_id, get_or_404, get_owned_or_404
 from models import Bag, Item, SubItem
 

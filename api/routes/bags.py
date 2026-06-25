@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy.orm import selectinload
+
 from errors import BadRequest, Conflict, NotFound, json_msg
 from extensions import db, get_current_user_id, get_or_404
 from models import Bag, Item, Trip, TripBag
@@ -8,7 +9,15 @@ from services.bag_service import duplicate_bag as duplicate_bag_service
 
 bags_bp = Blueprint("bags", __name__)
 
-ALLOWED_BAG_TYPES = {"carry-on", "luggage", "backpack", "handbag", "toiletry bag", "worn", "other"}
+ALLOWED_BAG_TYPES = {
+    "carry-on",
+    "luggage",
+    "backpack",
+    "handbag",
+    "toiletry bag",
+    "worn",
+    "other",
+}
 
 
 @bags_bp.route("/bags", methods=["GET"])
@@ -43,10 +52,8 @@ def create_bag():
 @jwt_required()
 def get_bag(bag_id):
     user_id = get_current_user_id()
-    bag = (
-        Bag.query
-        .options(selectinload(Bag.items).selectinload(Item.sub_items))
-        .get(bag_id)
+    bag = Bag.query.options(selectinload(Bag.items).selectinload(Item.sub_items)).get(
+        bag_id
     )
     if not bag or bag.user_id != user_id:
         raise NotFound("Bag not found")
@@ -74,7 +81,9 @@ def update_bag(bag_id):
         bag.name = new_name
     if new_type is not None:
         if new_type not in ALLOWED_BAG_TYPES:
-            raise BadRequest(f"type must be one of: {', '.join(sorted(ALLOWED_BAG_TYPES))}")
+            raise BadRequest(
+                f"type must be one of: {', '.join(sorted(ALLOWED_BAG_TYPES))}"
+            )
         bag.type = new_type
     db.session.commit()
     return jsonify(bag.to_dict()), 200
@@ -105,16 +114,12 @@ def delete_bag(bag_id):
 @jwt_required()
 def get_trip_bags(trip_id):
     user_id = get_current_user_id()
-    trip = (
-        Trip.query
-        .options(
-            selectinload(Trip.trip_bags)
-            .selectinload(TripBag.bag)
-            .selectinload(Bag.items)
-            .selectinload(Item.sub_items)
-        )
-        .get(trip_id)
-    )
+    trip = Trip.query.options(
+        selectinload(Trip.trip_bags)
+        .selectinload(TripBag.bag)
+        .selectinload(Bag.items)
+        .selectinload(Item.sub_items)
+    ).get(trip_id)
     if not trip or trip.user_id != user_id:
         raise NotFound("Trip not found")
 
@@ -135,7 +140,7 @@ def assign_bag_to_trip(trip_id):
     if not data or not data.get("bag_id"):
         raise BadRequest("bag_id is required")
 
-    trip = get_or_404(Trip, trip_id, user_id)
+    _trip = get_or_404(Trip, trip_id, user_id)
     bag = get_or_404(Bag, data["bag_id"], user_id)
 
     if TripBag.query.filter_by(trip_id=trip_id, bag_id=bag.id).first():

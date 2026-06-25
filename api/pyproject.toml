@@ -20,3 +20,10 @@ dependencies = [
 [tool.setuptools]
 py-modules = ["index", "app", "extensions"]
 packages = ["models", "services"]
+
+[project.optional-dependencies]
+dev = ["ruff", "pyright"]
+
+[tool.ruff.lint]
+ignore = ["E402"]
+

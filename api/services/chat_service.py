@@ -47,9 +47,8 @@ def get_categories() -> list[str]:
     if _categories_cache is not None:
         return _categories_cache
     from models import Category
-    cats = Category.query.filter(
-        (Category.user_id == None) | (Category.is_default == True)  # noqa: E711
-    ).all()
+
+    cats = Category.query.filter((Category.user_id == None) | Category.is_default).all()  # noqa: E711
     _categories_cache = [c.name for c in cats]
     return _categories_cache
 
@@ -80,7 +79,9 @@ def build_system_prompt(trip: Trip) -> str:
         for item in bag.items:
             if item.sub_items:
                 subs = ", ".join(f"{_s(s.name)} x{s.quantity}" for s in item.sub_items)
-                items.append(f"    · [id={item.id}] {_s(item.name)} (has sub-items: {subs})")
+                items.append(
+                    f"    · [id={item.id}] {_s(item.name)} (has sub-items: {subs})"
+                )
             else:
                 items.append(f"    · [id={item.id}] {_s(item.name)} x{item.quantity}")
         bags.append(
@@ -94,7 +95,9 @@ def build_system_prompt(trip: Trip) -> str:
     bags_section = chr(10).join(bags) if bags else "  No bags assigned yet."
     bag_refs_section = chr(10).join(bag_refs) if bag_refs else "  None"
     category_names = get_categories()
-    categories_section = ", ".join(f'"{c}"' for c in category_names) if category_names else "none"
+    categories_section = (
+        ", ".join(f'"{c}"' for c in category_names) if category_names else "none"
+    )
 
     return f"""You are an expert travel packing assistant helping the user pack for their trip.
 
@@ -209,7 +212,7 @@ def parse_reply(raw: str) -> tuple[str, list[dict]]:
             suggestions = data.get("suggestions", [])
         except (json.JSONDecodeError, AttributeError):
             pass
-        text = raw[:match.start()].rstrip()
+        text = raw[: match.start()].rstrip()
     else:
         text = raw
     return text, suggestions
@@ -217,8 +220,7 @@ def parse_reply(raw: str) -> tuple[str, list[dict]]:
 
 def get_history(session_id: int, user_id: int) -> list[ChatMessage]:
     return (
-        ChatMessage.query
-        .filter_by(session_id=session_id, user_id=user_id)
+        ChatMessage.query.filter_by(session_id=session_id, user_id=user_id)
         .order_by(ChatMessage.created_at.asc())
         .all()
     )
@@ -230,8 +232,20 @@ def build_gemini_history(messages: list[ChatMessage]) -> list[dict]:
     history = []
     if summary:
         history += [
-            {"role": "user", "parts": [{"text": f"[Conversation summary so far]: {summary.content}"}]},
-            {"role": "model", "parts": [{"text": "Got it, I have the context from our previous conversation."}]},
+            {
+                "role": "user",
+                "parts": [
+                    {"text": f"[Conversation summary so far]: {summary.content}"}
+                ],
+            },
+            {
+                "role": "model",
+                "parts": [
+                    {
+                        "text": "Got it, I have the context from our previous conversation."
+                    }
+                ],
+            },
         ]
         cutoff = summary.created_at
         recent = [m for m in messages if m.role != "summary" and m.created_at > cutoff]
@@ -245,16 +259,39 @@ def build_gemini_history(messages: list[ChatMessage]) -> list[dict]:
     return history
 
 
-def save_messages(session_id: int, user_id: int, user_content: str, model_content: str) -> None:
+def save_messages(
+    session_id: int, user_id: int, user_content: str, model_content: str
+) -> None:
     now = datetime.now(timezone.utc)
-    db.session.add(ChatMessage(session_id=session_id, user_id=user_id, role="user", content=user_content, created_at=now))
-    db.session.add(ChatMessage(session_id=session_id, user_id=user_id, role="model", content=model_content, created_at=now))
+    db.session.add(
+        ChatMessage(
+            session_id=session_id,
+            user_id=user_id,
+            role="user",
+            content=user_content,
+            created_at=now,
+        )
+    )
+    db.session.add(
+        ChatMessage(
+            session_id=session_id,
+            user_id=user_id,
+            role="model",
+            content=model_content,
+            created_at=now,
+        )
+    )
     db.session.commit()
 
 
 def save_context_message(session_id: int, user_id: int, content: str) -> None:
-    db.session.add(ChatMessage(
-        session_id=session_id, user_id=user_id, role="user",
-        content=content, created_at=datetime.now(timezone.utc),
-    ))
+    db.session.add(
+        ChatMessage(
+            session_id=session_id,
+            user_id=user_id,
+            role="user",
+            content=content,
+            created_at=datetime.now(timezone.utc),
+        )
+    )
     db.session.commit()

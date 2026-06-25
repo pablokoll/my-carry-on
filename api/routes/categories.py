@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from errors import BadRequest, NotFound, json_msg
+from errors import BadRequest, json_msg
 from extensions import db, get_current_user_id, get_or_404
 from models import Category
 
@@ -12,7 +12,7 @@ categories_bp = Blueprint("categories", __name__)
 def get_categories():
     user_id = get_current_user_id()
     categories = Category.query.filter(
-        (Category.user_id == user_id) | (Category.is_default == True)
+        (Category.user_id == user_id) | Category.is_default
     ).all()
     return jsonify([c.to_dict() for c in categories]), 200
 

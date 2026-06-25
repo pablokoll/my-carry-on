@@ -8,7 +8,7 @@ class BaseModel(db.Model):
 
     def to_dict(self):
         result = {}
-        for c in self.__table__.columns:
+        for c in self.__table__.columns:  # type: ignore[attr-defined]
             val = getattr(self, c.name)
             if isinstance(val, (datetime, date)):
                 val = val.isoformat()
