@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
-from errors import BadRequest, json_msg
+from errors import BadRequest
+from responses import json_msg
 from extensions import db, get_current_user_id, get_or_404, limiter
 from models import ChatMessage, ChatSession, Trip
 from services.ai import get_provider

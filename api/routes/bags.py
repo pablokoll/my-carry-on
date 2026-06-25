@@ -2,7 +2,8 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy.orm import selectinload
 
-from errors import BadRequest, Conflict, NotFound, json_msg
+from errors import BadRequest, Conflict, NotFound
+from responses import json_msg
 from extensions import db, get_current_user_id, get_or_404
 from models import Bag, Item, Trip, TripBag
 from services.bag_service import duplicate_bag as duplicate_bag_service

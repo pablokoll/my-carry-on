@@ -8,7 +8,8 @@ from flask_jwt_extended import (
 )
 from sqlalchemy.exc import IntegrityError
 
-from errors import BadRequest, Conflict, Unauthorized, json_msg
+from errors import BadRequest, Conflict, Unauthorized
+from responses import json_msg
 from extensions import db, limiter
 from models import User
 from models.auth import AuthLog, TokenBlocklist
