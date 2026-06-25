@@ -1,60 +1,14 @@
 import json
-import os
 import re
 from datetime import date, datetime, timezone
 
-import requests
-
 from extensions import db
 from models import ChatMessage, Trip
-
-OWM_API_KEY = os.environ.get("API_KEY_OPEN_WEATHER_MAP")
-
-_weather_cache: dict[str, tuple[str, datetime]] = {}
-_WEATHER_TTL_SECONDS = 1800
-
-
-def get_weather(city: str) -> str:
-    now = datetime.now(timezone.utc)
-    cached = _weather_cache.get(city)
-    if cached and (now - cached[1]).total_seconds() < _WEATHER_TTL_SECONDS:
-        return cached[0]
-    try:
-        r = requests.get(
-            "https://api.openweathermap.org/data/2.5/weather",
-            params={"q": city, "appid": OWM_API_KEY, "units": "metric"},
-            timeout=5,
-        )
-        if r.status_code == 401:
-            return "weather API key invalid"
-        if r.status_code == 404:
-            return "city not found"
-        if r.status_code != 200:
-            return "weather unavailable"
-        d = r.json()
-        result = f"{d['weather'][0]['description']}, {d['main']['temp']:.0f}°C"
-        _weather_cache[city] = (result, now)
-        return result
-    except Exception:
-        return "weather unavailable"
-
-
-_categories_cache: list[str] | None = None
-
-
-def get_categories() -> list[str]:
-    global _categories_cache
-    if _categories_cache is not None:
-        return _categories_cache
-    from models import Category
-
-    cats = Category.query.filter((Category.user_id == None) | Category.is_default).all()  # noqa: E711
-    _categories_cache = [c.name for c in cats]
-    return _categories_cache
+from services.categories_service import get_categories
+from services.weather_service import get_weather
 
 
 def _s(value: str) -> str:
-    """Sanitize user-supplied strings before embedding in the system prompt."""
     return value.strip().replace("```", "'''")
 
 
@@ -224,39 +178,6 @@ def get_history(session_id: int, user_id: int) -> list[ChatMessage]:
         .order_by(ChatMessage.created_at.asc())
         .all()
     )
-
-
-def build_gemini_history(messages: list[ChatMessage]) -> list[dict]:
-    summary = next((m for m in reversed(messages) if m.role == "summary"), None)
-
-    history = []
-    if summary:
-        history += [
-            {
-                "role": "user",
-                "parts": [
-                    {"text": f"[Conversation summary so far]: {summary.content}"}
-                ],
-            },
-            {
-                "role": "model",
-                "parts": [
-                    {
-                        "text": "Got it, I have the context from our previous conversation."
-                    }
-                ],
-            },
-        ]
-        cutoff = summary.created_at
-        recent = [m for m in messages if m.role != "summary" and m.created_at > cutoff]
-    else:
-        recent = [m for m in messages if m.role != "summary"]
-
-    for m in recent:
-        role = "user" if m.role == "user" else "model"
-        history.append({"role": role, "parts": [{"text": m.content}]})
-
-    return history
 
 
 def save_messages(

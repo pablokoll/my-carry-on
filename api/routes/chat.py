@@ -8,8 +8,8 @@ from extensions import db, get_current_user_id, get_or_404, limiter
 from models import ChatMessage, ChatSession, Trip
 from services.ai import get_provider
 from services.ai.gemini import ProviderRateLimitError
+from services.ai.history import build_gemini_history
 from services.chat_service import (
-    build_gemini_history,
     build_system_prompt,
     get_history,
     save_context_message,
