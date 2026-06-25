@@ -112,7 +112,7 @@ def delete_bag(bag_id):
 
 @bags_bp.route("/trips/<int:trip_id>/bags", methods=["GET"])
 @jwt_required()
-def get_trip_bags(trip_id):
+def get_trip_bags_with_items(trip_id):
     user_id = get_current_user_id()
     trip = Trip.query.options(
         selectinload(Trip.trip_bags)
