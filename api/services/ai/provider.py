@@ -14,8 +14,11 @@ def get_provider() -> AIProvider:
 
     if provider_name == "gemini":
         from services.ai.gemini import GeminiProvider
+
         _instance = GeminiProvider()
     else:
-        raise ValueError(f"Unknown AI provider: '{provider_name}'. Set AI_PROVIDER env var.")
+        raise ValueError(
+            f"Unknown AI provider: '{provider_name}'. Set AI_PROVIDER env var."
+        )
 
     return _instance

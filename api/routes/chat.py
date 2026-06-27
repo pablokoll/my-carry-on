@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 from flask_jwt_extended import jwt_required
 
 from errors import BadRequest
@@ -23,6 +24,7 @@ chat_bp = Blueprint("chat", __name__)
 
 # --- Session endpoints ---
 
+
 @chat_bp.route("/chat/sessions", methods=["GET"])
 @jwt_required()
 def list_sessions():
@@ -34,23 +36,26 @@ def list_sessions():
     get_or_404(Trip, trip_id, user_id)
 
     sessions = (
-        ChatSession.query
-        .filter_by(trip_id=trip_id, user_id=user_id)
+        ChatSession.query.filter_by(trip_id=trip_id, user_id=user_id)
         .order_by(ChatSession.created_at.desc())
         .all()
     )
 
     result = []
     for s in sessions:
-        msg_count = ChatMessage.query.filter_by(session_id=s.id).filter(
-            ChatMessage.role != "summary"
-        ).count()
-        result.append({
-            "id": s.id,
-            "title": s.title,
-            "created_at": s.created_at.isoformat() if s.created_at else None,
-            "message_count": msg_count,
-        })
+        msg_count = (
+            ChatMessage.query.filter_by(session_id=s.id)
+            .filter(ChatMessage.role != "summary")
+            .count()
+        )
+        result.append(
+            {
+                "id": s.id,
+                "title": s.title,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+                "message_count": msg_count,
+            }
+        )
 
     return jsonify(result), 200
 
@@ -77,7 +82,7 @@ def create_session():
 
 @chat_bp.route("/chat/sessions/<int:session_id>", methods=["DELETE"])
 @jwt_required()
-def delete_session(session_id):
+def delete_session(session_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     session = get_or_404(ChatSession, session_id, user_id)
     db.session.delete(session)
@@ -87,7 +92,7 @@ def delete_session(session_id):
 
 @chat_bp.route("/chat/sessions/<int:session_id>/messages", methods=["DELETE"])
 @jwt_required()
-def clear_session_messages(session_id):
+def clear_session_messages(session_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     session = get_or_404(ChatSession, session_id, user_id)
     ChatMessage.query.filter_by(session_id=session_id).delete()
@@ -98,12 +103,11 @@ def clear_session_messages(session_id):
 
 @chat_bp.route("/chat/sessions/<int:session_id>/messages", methods=["GET"])
 @jwt_required()
-def get_session_messages(session_id):
+def get_session_messages(session_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     get_or_404(ChatSession, session_id, user_id)
     messages = (
-        ChatMessage.query
-        .filter_by(session_id=session_id, user_id=user_id)
+        ChatMessage.query.filter_by(session_id=session_id, user_id=user_id)
         .filter(ChatMessage.role != "summary")
         .order_by(ChatMessage.created_at.asc())
         .all()
@@ -112,6 +116,7 @@ def get_session_messages(session_id):
 
 
 # --- Chat endpoint ---
+
 
 @chat_bp.route("/chat", methods=["POST"])
 @jwt_required()
@@ -135,12 +140,16 @@ def chat():
     remaining = provider.check_rate_limit()
     if remaining is None:
         now = datetime.now(timezone.utc)
-        midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        return jsonify({
-            "error": "rate_limit_daily",
-            "message": "Daily request limit reached. Resets at midnight UTC.",
-            "wait_seconds": int((midnight - now).total_seconds()),
-        }), 429
+        midnight = (now + timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        return jsonify(
+            {
+                "error": "rate_limit_daily",
+                "message": "Daily request limit reached. Resets at midnight UTC.",
+                "wait_seconds": int((midnight - now).total_seconds()),
+            }
+        ), 429
 
     db_history = compact_if_needed(session_id, user_id, provider)
     non_summary = [m for m in db_history if m.role != "summary"]
@@ -153,14 +162,18 @@ def chat():
     try:
         ai_response = provider.send_message(history, system_prompt, user_message)
     except ProviderRateLimitError as e:
-        return jsonify({
-            "error": "rate_limit",
-            "message": "Request limit reached. Please wait before continuing.",
-            "wait_seconds": e.wait_seconds,
-        }), 429
+        return jsonify(
+            {
+                "error": "rate_limit",
+                "message": "Request limit reached. Please wait before continuing.",
+                "wait_seconds": e.wait_seconds,
+            }
+        ), 429
 
     save_messages(session_id, user_id, user_message, ai_response.reply)
-    session_title = set_title_if_needed(session, user_message, ai_response.reply, is_first, provider)
+    session_title = set_title_if_needed(
+        session, user_message, ai_response.reply, is_first, provider
+    )
 
     updated_history = get_history(session_id, user_id)
     response_data = {
@@ -175,6 +188,7 @@ def chat():
 
 
 # --- Log endpoint ---
+
 
 @chat_bp.route("/chat/log", methods=["POST"])
 @jwt_required()
@@ -193,8 +207,11 @@ def log_context():
 
 # --- Status endpoint ---
 
+
 @chat_bp.route("/chat/status", methods=["GET"])
 @jwt_required()
 def chat_status():
     status = get_provider().get_rate_limit_status()
-    return jsonify({"used": status.used, "limit": status.limit, "remaining": status.remaining}), 200
+    return jsonify(
+        {"used": status.used, "limit": status.limit, "remaining": status.remaining}
+    ), 200

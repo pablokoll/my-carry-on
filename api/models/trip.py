@@ -22,8 +22,12 @@ class Trip(BaseModel):
     end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="trips")
-    destinations: Mapped[List["Destination"]] = relationship("Destination", back_populates="trip", lazy=True, cascade="all, delete-orphan")
-    trip_bags: Mapped[List["TripBag"]] = relationship("TripBag", back_populates="trip", lazy=True, cascade="all, delete-orphan")
+    destinations: Mapped[List["Destination"]] = relationship(
+        "Destination", back_populates="trip", lazy=True, cascade="all, delete-orphan"
+    )
+    trip_bags: Mapped[List["TripBag"]] = relationship(
+        "TripBag", back_populates="trip", lazy=True, cascade="all, delete-orphan"
+    )
 
 
 class Destination(BaseModel):

@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 from flask_jwt_extended import jwt_required
 from errors import BadRequest
 from responses import json_msg
@@ -10,7 +11,7 @@ items_bp = Blueprint("items", __name__)
 
 @items_bp.route("/bags/<int:bag_id>/items", methods=["GET"])
 @jwt_required()
-def get_items(bag_id):
+def get_items(bag_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     bag = get_or_404(Bag, bag_id, user_id)
     return jsonify([item.to_dict() for item in bag.items]), 200
@@ -18,7 +19,7 @@ def get_items(bag_id):
 
 @items_bp.route("/bags/<int:bag_id>/items", methods=["POST"])
 @jwt_required()
-def create_item(bag_id):
+def create_item(bag_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     bag = get_or_404(Bag, bag_id, user_id)
 
@@ -31,7 +32,12 @@ def create_item(bag_id):
     if not isinstance(quantity, int) or quantity < 1:
         raise BadRequest("quantity must be a positive integer")
 
-    item = Item(bag_id=bag.id, name=data["name"], category_id=data.get("category_id"), quantity=quantity)
+    item = Item(
+        bag_id=bag.id,
+        name=data["name"],
+        category_id=data.get("category_id"),
+        quantity=quantity,
+    )
     db.session.add(item)
     db.session.commit()
     return jsonify(item.to_dict()), 201
@@ -39,7 +45,7 @@ def create_item(bag_id):
 
 @items_bp.route("/items/<int:item_id>", methods=["PUT"])
 @jwt_required()
-def update_item(item_id):
+def update_item(item_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     data = request.get_json()
     if not data:
@@ -67,7 +73,7 @@ def update_item(item_id):
 
 @items_bp.route("/items/<int:item_id>", methods=["DELETE"])
 @jwt_required()
-def delete_item(item_id):
+def delete_item(item_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     item = get_owned_or_404(Item, item_id, user_id, "bag.user_id")
     db.session.delete(item)
@@ -77,7 +83,7 @@ def delete_item(item_id):
 
 @items_bp.route("/items/<int:item_id>/sub-items", methods=["GET"])
 @jwt_required()
-def get_sub_items(item_id):
+def get_sub_items(item_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     item = get_owned_or_404(Item, item_id, user_id, "bag.user_id")
     return jsonify([s.to_dict() for s in item.sub_items]), 200
@@ -85,7 +91,7 @@ def get_sub_items(item_id):
 
 @items_bp.route("/items/<int:item_id>/sub-items", methods=["POST"])
 @jwt_required()
-def create_sub_item(item_id):
+def create_sub_item(item_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     item = get_owned_or_404(Item, item_id, user_id, "bag.user_id")
 
@@ -106,7 +112,7 @@ def create_sub_item(item_id):
 
 @items_bp.route("/sub-items/<int:sub_item_id>", methods=["PUT"])
 @jwt_required()
-def update_sub_item(sub_item_id):
+def update_sub_item(sub_item_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     data = request.get_json()
     if not data:
@@ -132,7 +138,7 @@ def update_sub_item(sub_item_id):
 
 @items_bp.route("/sub-items/<int:sub_item_id>", methods=["DELETE"])
 @jwt_required()
-def delete_sub_item(sub_item_id):
+def delete_sub_item(sub_item_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     sub_item = get_owned_or_404(SubItem, sub_item_id, user_id, "item.bag.user_id")
     db.session.delete(sub_item)

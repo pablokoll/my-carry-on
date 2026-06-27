@@ -22,7 +22,7 @@ py-modules = ["index", "app", "extensions"]
 packages = ["models", "services"]
 
 [project.optional-dependencies]
-dev = ["ruff", "pyright"]
+dev = ["ruff", "basedpyright"]
 
 [tool.ruff.lint]
 ignore = ["E402"]

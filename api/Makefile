@@ -1,7 +1,10 @@
 lint:
 	ruff check .
 
+format:
+	ruff format .
+
 typecheck:
-	pyright .
+	basedpyright .
 
 check: lint typecheck

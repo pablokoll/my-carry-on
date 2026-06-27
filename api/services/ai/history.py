@@ -1,14 +1,30 @@
+from google.genai import types as genai_types
+
 from models import ChatMessage
 
 
-def build_gemini_history(messages: list[ChatMessage]) -> list[dict]:
+def build_gemini_history(
+    messages: list[ChatMessage],
+) -> list[genai_types.ContentOrDict]:
     summary = next((m for m in reversed(messages) if m.role == "summary"), None)
 
     history = []
     if summary:
         history += [
-            {"role": "user", "parts": [{"text": f"[Conversation summary so far]: {summary.content}"}]},
-            {"role": "model", "parts": [{"text": "Got it, I have the context from our previous conversation."}]},
+            {
+                "role": "user",
+                "parts": [
+                    {"text": f"[Conversation summary so far]: {summary.content}"}
+                ],
+            },
+            {
+                "role": "model",
+                "parts": [
+                    {
+                        "text": "Got it, I have the context from our previous conversation."
+                    }
+                ],
+            },
         ]
         cutoff = summary.created_at
         recent = [m for m in messages if m.role != "summary" and m.created_at > cutoff]

@@ -156,7 +156,7 @@ Append this block at the END of your response (after all text):
 - All numeric fields (quantity, item_id, bag_id) must be integers, never strings."""
 
 
-def parse_reply(raw: str) -> tuple[str, list[dict]]:
+def parse_reply(raw: str) -> tuple[str, list[dict[str, object]]]:
     suggestions = []
     pattern = r"```json\s*(\{.*?\})\s*```"
     match = re.search(pattern, raw, re.DOTALL)

@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
+from google.genai import types as genai_types
+
 
 @dataclass
 class AIResponse:
     reply: str
-    suggestions: list[dict] = field(default_factory=list)
+    suggestions: list[dict[str, object]] = field(default_factory=list)
 
 
 @dataclass
@@ -17,7 +19,12 @@ class RateLimitStatus:
 
 class AIProvider(ABC):
     @abstractmethod
-    def send_message(self, history: list[dict], system_prompt: str, user_message: str) -> AIResponse:
+    def send_message(
+        self,
+        history: list[genai_types.ContentOrDict],
+        system_prompt: str,
+        user_message: str,
+    ) -> AIResponse:
         """Send a message and return the AI response."""
         ...
 

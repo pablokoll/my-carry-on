@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 from flask_jwt_extended import jwt_required
 from sqlalchemy.orm import selectinload
 
@@ -51,7 +52,7 @@ def create_bag():
 
 @bags_bp.route("/bags/<int:bag_id>", methods=["GET"])
 @jwt_required()
-def get_bag(bag_id):
+def get_bag(bag_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     bag = Bag.query.options(selectinload(Bag.items).selectinload(Item.sub_items)).get(
         bag_id
@@ -66,7 +67,7 @@ def get_bag(bag_id):
 
 @bags_bp.route("/bags/<int:bag_id>", methods=["PUT"])
 @jwt_required()
-def update_bag(bag_id):
+def update_bag(bag_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     data = request.get_json()
     if not data:
@@ -92,7 +93,7 @@ def update_bag(bag_id):
 
 @bags_bp.route("/bags/<int:bag_id>/duplicate", methods=["POST"])
 @jwt_required()
-def duplicate_bag(bag_id):
+def duplicate_bag(bag_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     bag = get_or_404(Bag, bag_id, user_id)
     new_bag = duplicate_bag_service(bag, user_id)
@@ -103,7 +104,7 @@ def duplicate_bag(bag_id):
 
 @bags_bp.route("/bags/<int:bag_id>", methods=["DELETE"])
 @jwt_required()
-def delete_bag(bag_id):
+def delete_bag(bag_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     bag = get_or_404(Bag, bag_id, user_id)
     db.session.delete(bag)
@@ -113,7 +114,7 @@ def delete_bag(bag_id):
 
 @bags_bp.route("/trips/<int:trip_id>/bags", methods=["GET"])
 @jwt_required()
-def get_trip_bags_with_items(trip_id):
+def get_trip_bags_with_items(trip_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     trip = Trip.query.options(
         selectinload(Trip.trip_bags)
@@ -135,7 +136,7 @@ def get_trip_bags_with_items(trip_id):
 
 @bags_bp.route("/trips/<int:trip_id>/bags", methods=["POST"])
 @jwt_required()
-def assign_bag_to_trip(trip_id):
+def assign_bag_to_trip(trip_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     data = request.get_json()
     if not data or not data.get("bag_id"):
@@ -155,7 +156,7 @@ def assign_bag_to_trip(trip_id):
 
 @bags_bp.route("/trips/<int:trip_id>/bags/<int:bag_id>", methods=["DELETE"])
 @jwt_required()
-def unassign_bag_from_trip(trip_id, bag_id):
+def unassign_bag_from_trip(trip_id: int, bag_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     get_or_404(Trip, trip_id, user_id)
     get_or_404(Bag, bag_id, user_id)

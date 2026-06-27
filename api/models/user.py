@@ -18,11 +18,15 @@ class User(BaseModel):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
 
     trips: Mapped[List["Trip"]] = relationship("Trip", back_populates="user", lazy=True)
     bags: Mapped[List["Bag"]] = relationship("Bag", back_populates="user", lazy=True)
-    categories: Mapped[List["Category"]] = relationship("Category", back_populates="user", lazy=True)
+    categories: Mapped[List["Category"]] = relationship(
+        "Category", back_populates="user", lazy=True
+    )
 
     def set_password(self, password: str) -> None:
         self.password_hash = bcrypt.hashpw(

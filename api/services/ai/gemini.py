@@ -1,7 +1,9 @@
 import os
 from datetime import date
+from typing import override
 
 from google import genai
+from google.genai import types as genai_types
 
 from services.ai.base import AIProvider, AIResponse, RateLimitStatus
 from services.chat_service import parse_reply
@@ -12,17 +14,23 @@ RPD_LIMIT = int(os.environ.get("GEMINI_RPD_LIMIT", "20"))
 
 
 class GeminiProvider(AIProvider):
-    def __init__(self):
+    _client: genai.Client
+
+    def __init__(self) -> None:
         self._client = genai.Client(api_key=os.environ.get("API_KEY_AI_GOOGLE_STUDIO"))
         self._rpd_count: int = 0
         self._rpd_date: date | None = None
 
+    @override
     def send_message(
-        self, history: list[dict], system_prompt: str, user_message: str
+        self,
+        history: list[genai_types.ContentOrDict],
+        system_prompt: str,
+        user_message: str,
     ) -> AIResponse:
         from google.genai.errors import ClientError
 
-        full_history = [
+        full_history: list[genai_types.ContentOrDict] = [
             {"role": "user", "parts": [{"text": system_prompt}]},
             {
                 "role": "model",
@@ -45,10 +53,14 @@ class GeminiProvider(AIProvider):
                 raise ProviderRateLimitError(wait_seconds=wait_seconds)
             raise
 
-        raw = response.text or (response.candidates[0].content.parts[0].text if response.candidates else "") or ""  # type: ignore[index,union-attr]
+        first = response.candidates[0] if response.candidates else None
+        content = first.content if first else None
+        part = content.parts[0] if content and content.parts else None
+        raw = response.text or (part.text if part else None) or ""
         reply, suggestions = parse_reply(raw)
         return AIResponse(reply=reply, suggestions=suggestions)
 
+    @override
     def check_rate_limit(self) -> int | None:
         today = date.today()
         if self._rpd_date != today:
@@ -59,6 +71,7 @@ class GeminiProvider(AIProvider):
         self._rpd_count += 1
         return RPD_LIMIT - self._rpd_count
 
+    @override
     def get_rate_limit_status(self) -> RateLimitStatus:
         today = date.today()
         count = self._rpd_count if self._rpd_date == today else 0
@@ -66,6 +79,7 @@ class GeminiProvider(AIProvider):
             used=count, limit=RPD_LIMIT, remaining=max(0, RPD_LIMIT - count)
         )
 
+    @override
     def summarize(self, text: str) -> str:
         result = self._client.models.generate_content(
             model=MODEL,
@@ -76,6 +90,7 @@ class GeminiProvider(AIProvider):
         )
         return result.text or ""
 
+    @override
     def generate_title(self, first_user_msg: str, first_model_reply: str) -> str:
         try:
             result = self._client.models.generate_content(
@@ -92,5 +107,8 @@ class GeminiProvider(AIProvider):
 
 
 class ProviderRateLimitError(Exception):
+    wait_seconds: int
+
     def __init__(self, wait_seconds: int):
+        super().__init__(f"Rate limit hit, retry in {wait_seconds}s")
         self.wait_seconds = wait_seconds

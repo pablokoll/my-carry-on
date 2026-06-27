@@ -1,8 +1,11 @@
+from typing import cast
+
 from sqlalchemy.orm import selectinload
+
 from models import Bag, Item, Trip, TripBag
 
 
-def _bag_packing_stats(bag: Bag) -> dict:
+def _bag_packing_stats(bag: Bag) -> dict[str, object]:
     total = 0
     packed = 0
     for item in bag.items:
@@ -16,13 +19,20 @@ def _bag_packing_stats(bag: Bag) -> dict:
             total += item.quantity or 1
             if item.packed:
                 packed += item.quantity or 1
-    return {"id": bag.id, "name": bag.name, "type": bag.type, "items_total": total, "items_packed": packed}
+    return {
+        "id": bag.id,
+        "name": bag.name,
+        "type": bag.type,
+        "items_total": total,
+        "items_packed": packed,
+    }
 
 
-def get_trips_with_stats(user_id: int, limit: int | None = None) -> list[dict]:
+def get_trips_with_stats(
+    user_id: int, limit: int | None = None
+) -> list[dict[str, object]]:
     query = (
-        Trip.query
-        .filter_by(user_id=user_id)
+        Trip.query.filter_by(user_id=user_id)
         .order_by(Trip.is_active.desc(), Trip.start_date.desc())
         .options(
             selectinload(Trip.trip_bags)
@@ -38,7 +48,7 @@ def get_trips_with_stats(user_id: int, limit: int | None = None) -> list[dict]:
         d = trip.to_dict()
         bags = [_bag_packing_stats(tb.bag) for tb in trip.trip_bags]
         d["bags"] = bags
-        d["items_total"] = sum(b["items_total"] for b in bags)
-        d["items_packed"] = sum(b["items_packed"] for b in bags)
+        d["items_total"] = sum(cast(int, b["items_total"]) for b in bags)
+        d["items_packed"] = sum(cast(int, b["items_packed"]) for b in bags)
         result.append(d)
     return result

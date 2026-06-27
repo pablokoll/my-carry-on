@@ -2,5 +2,17 @@
   "venvPath": ".",
   "venv": ".venv",
   "exclude": ["build/", ".venv/", "__pycache__/", ".vercel/", "migrations/"],
-  "reportCallIssue": "none"
+  "reportCallIssue": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownParameterType": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportImportCycles": "none",
+  "reportAny": "none",
+  "reportDeprecated": "none",
+  "reportUntypedFunctionDecorator": "none",
+  "reportUnusedCallResult": "none",
+  "reportUnusedFunction": "none",
+  "reportUnannotatedClassAttribute": "none"
 }

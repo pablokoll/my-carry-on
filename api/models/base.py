@@ -4,7 +4,7 @@ from extensions import db
 
 
 class BaseModel(db.Model):
-    __abstract__ = True
+    __abstract__: bool = True
 
     def to_dict(self):
         result = {}

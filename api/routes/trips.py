@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 from flask_jwt_extended import jwt_required
 from errors import BadRequest
 from responses import json_msg
@@ -27,7 +28,12 @@ def create_trip():
     if len(data["name"]) > 255:
         raise BadRequest("name must be 255 characters or less")
 
-    trip = Trip(user_id=user_id, name=data["name"], start_date=data.get("start_date"), end_date=data.get("end_date"))
+    trip = Trip(
+        user_id=user_id,
+        name=data["name"],
+        start_date=data.get("start_date"),
+        end_date=data.get("end_date"),
+    )
     db.session.add(trip)
     db.session.commit()
     return jsonify(trip.to_dict()), 201
@@ -35,7 +41,7 @@ def create_trip():
 
 @trips_bp.route("/trips/<int:trip_id>", methods=["GET"])
 @jwt_required()
-def get_trip(trip_id):
+def get_trip(trip_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     trip = get_or_404(Trip, trip_id, user_id)
     return jsonify(trip.to_dict()), 200
@@ -43,7 +49,7 @@ def get_trip(trip_id):
 
 @trips_bp.route("/trips/<int:trip_id>", methods=["PUT"])
 @jwt_required()
-def update_trip(trip_id):
+def update_trip(trip_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     data = request.get_json()
     if not data:
@@ -59,7 +65,7 @@ def update_trip(trip_id):
 
 @trips_bp.route("/trips/<int:trip_id>", methods=["DELETE"])
 @jwt_required()
-def delete_trip(trip_id):
+def delete_trip(trip_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     trip = get_or_404(Trip, trip_id, user_id)
     db.session.delete(trip)
@@ -69,7 +75,7 @@ def delete_trip(trip_id):
 
 @trips_bp.route("/trips/<int:trip_id>/activate", methods=["POST"])
 @jwt_required()
-def activate_trip(trip_id):
+def activate_trip(trip_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     trip = get_or_404(Trip, trip_id, user_id)
 
@@ -81,7 +87,7 @@ def activate_trip(trip_id):
 
 @trips_bp.route("/trips/<int:trip_id>/deactivate", methods=["POST"])
 @jwt_required()
-def deactivate_trip(trip_id):
+def deactivate_trip(trip_id: int) -> ResponseReturnValue:
     user_id = get_current_user_id()
     trip = get_or_404(Trip, trip_id, user_id)
     trip.is_active = False
