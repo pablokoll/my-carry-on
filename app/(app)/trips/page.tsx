@@ -1,21 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import Link from 'next/link'
-import { clearTokens } from '@/lib/api'
 import { useTrips, type Trip } from '@/lib/queries'
 import { CreateTripModal } from '@/components/create-trip-modal'
 import { btnPrimary } from '@/lib/styles'
 
 export default function TripsPage() {
-  const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
-  const { data: trips = [], isLoading, isError } = useTrips()
-
-  useEffect(() => {
-    if (isError) { clearTokens(); router.replace('/login') }
-  }, [isError, router])
+  const { data: trips = [], isLoading } = useTrips()
 
   if (isLoading) {
     return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>

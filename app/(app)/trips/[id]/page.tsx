@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { clearTokens } from '@/lib/api'
 import {
   useTripDetail, useTripBags, useTripDestinations, useAllBags, useCategories,
   useUpdateTrip, useDeleteTrip, useToggleTripActive,
@@ -13,7 +12,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { keys } from '@/lib/queries'
 import { FormModal, Field } from '@/components/ui/form-modal'
-import { CreateBagModal, type Bag } from '@/components/create-bag-modal'
+import { CreateBagModal } from '@/components/create-bag-modal'
+import type { Bag } from '@/lib/queries'
 import { BagItemsTable, type Item, type Category } from '@/components/bag-items-table'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { TypeBadge } from '@/components/ui/type-badge'
@@ -27,7 +27,7 @@ export default function TripPage() {
   const router = useRouter()
   const qc = useQueryClient()
 
-  const { data: trip, isLoading, isError } = useTripDetail(id)
+  const { data: trip, isLoading } = useTripDetail(id)
   const { data: destinations = [], isLoading: destLoading } = useTripDestinations(id)
   const { data: tripBags = [] } = useTripBags(id)
   const { data: allBags = [] } = useAllBags()
@@ -57,10 +57,6 @@ export default function TripPage() {
   const [confirmBagId, setConfirmBagId] = useState<number | null>(null)
   const [expandedBags, setExpandedBags] = useState<Set<number>>(new Set())
   const [createBagOpen, setCreateBagOpen] = useState(false)
-
-  useEffect(() => {
-    if (isError) { clearTokens(); router.replace('/login') }
-  }, [isError, router])
 
   if (isLoading) return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
   if (!trip) return <p style={{ color: 'var(--destructive)', textAlign: 'center', paddingTop: '48px' }}>Trip not found.</p>
