@@ -1,84 +1,97 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useCreateBag, type Bag } from "@/lib/queries";
-import { FormModal, Field } from "@/components/ui/form-modal";
-import { BAG_TYPES, type BagType } from "@/lib/constants";
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Dialog } from '@/components/ui/dialog'
+import { useCreateBag, type Bag } from '@/lib/queries'
+import { BAG_TYPES } from '@/lib/constants'
+import { inputStyle, labelStyle, errorStyle, submitBtnStyle } from '@/lib/styles'
+
+const schema = z.object({
+  name: z.string().min(1, 'Name is required').max(255, 'Name must be 255 characters or less'),
+  type: z.enum(BAG_TYPES),
+})
+
+type FormData = z.infer<typeof schema>
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
-  onCreated: (bag: Bag) => void;
+  open: boolean
+  onClose: () => void
+  onCreated: (bag: Bag) => void
 }
 
 export function CreateBagModal({ open, onClose, onCreated }: Props) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState<BagType>("carry-on");
-  const [nameError, setNameError] = useState("");
-  const [formError, setFormError] = useState("");
-  const createBag = useCreateBag();
+  const [error, setError] = useState<string | null>(null)
+  const createBag = useCreateBag()
 
-  function handleClose() {
-    setName("");
-    setType("carry-on");
-    setNameError("");
-    setFormError("");
-    onClose();
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: { type: 'carry-on' },
+  })
+
+  async function onSubmit(data: FormData) {
+    setError(null)
+    try {
+      const bag = await createBag.mutateAsync(data)
+      onCreated(bag)
+      reset()
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create bag')
+    }
   }
 
-  async function handleCreate() {
-    if (!name.trim()) {
-      setNameError("Name is required");
-      return;
-    }
-    setNameError("");
-    setFormError("");
-    try {
-      const bag = await createBag.mutateAsync({ name: name.trim(), type });
-      onCreated(bag);
-      handleClose();
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : "Failed to create bag");
-    }
+  function handleClose() {
+    reset()
+    setError(null)
+    onClose()
   }
 
   return (
-    <FormModal
-      open={open}
-      onClose={handleClose}
-      title="New bag"
-      onSubmit={handleCreate}
-      submitting={createBag.isPending}
-      submitLabel="Create bag"
-      error={formError}
-    >
-      <Field label="Name" error={nameError}>
-        <input
-          type="text"
-          placeholder="e.g. Main carry-on"
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleCreate();
-          }}
-        />
-      </Field>
-      <Field label="Type">
-        <select
-          value={type}
-          onChange={(e) =>
-            setType(e.target.value as BagType)
-          }
-          style={{ cursor: "pointer" }}
-        >
-          {BAG_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </Field>
-    </FormModal>
-  );
+    <Dialog open={open} onClose={handleClose}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '17px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>New bag</h2>
+        <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '18px', lineHeight: 1, padding: '4px' }}>✕</button>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div>
+          <label style={labelStyle}>Name</label>
+          <input
+            type="text"
+            placeholder="e.g. Main carry-on"
+            autoFocus
+            {...register('name')}
+            style={inputStyle(!!errors.name)}
+            onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')}
+            onBlur={e => (e.target.style.boxShadow = 'none')}
+          />
+          {errors.name && <p style={errorStyle}>{errors.name.message}</p>}
+        </div>
+
+        <div>
+          <label style={labelStyle}>Type</label>
+          <select
+            {...register('type')}
+            style={{ ...inputStyle(false), cursor: 'pointer' }}
+          >
+            {BAG_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+
+        {error && <p style={{ fontSize: '13px', color: 'var(--destructive)', textAlign: 'center' }}>{error}</p>}
+
+        <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+          <button type="button" onClick={handleClose} style={{ flex: 1, height: '42px', background: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+            Cancel
+          </button>
+          <button type="submit" disabled={isSubmitting} style={{ ...submitBtnStyle(isSubmitting), flex: 1, marginTop: 0 }}>
+            {isSubmitting ? 'Creating…' : 'Create bag'}
+          </button>
+        </div>
+      </form>
+    </Dialog>
+  )
 }

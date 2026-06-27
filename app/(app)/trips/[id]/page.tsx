@@ -11,9 +11,10 @@ import {
 } from '@/lib/queries'
 import { useQueryClient } from '@tanstack/react-query'
 import { keys } from '@/lib/queries'
-import { FormModal, Field } from '@/components/ui/form-modal'
+import { Dialog } from '@/components/ui/dialog'
 import { CreateBagModal } from '@/components/create-bag-modal'
 import type { Bag } from '@/lib/queries'
+import { inputStyle, labelStyle, errorStyle, submitBtnStyle } from '@/lib/styles'
 import { BagItemsTable, type Item, type Category } from '@/components/bag-items-table'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { TypeBadge } from '@/components/ui/type-badge'
@@ -211,51 +212,69 @@ export default function TripPage() {
       </div>
 
       {/* Edit trip modal */}
-      <FormModal
-        open={editForm.open}
-        onClose={() => editForm.setOpen(false)}
-        title="Edit trip"
-        onSubmit={editForm.handleSubmit}
-        submitting={editForm.isPending}
-        submitLabel="Save"
-        error={editForm.err}
-      >
-        <Field label="Name" error={editForm.nameErr}>
-          <input type="text" autoFocus value={editForm.name} onChange={e => editForm.setName(e.target.value)} />
-        </Field>
-        <Field label="Start date">
-          <input type="date" value={editForm.start} onChange={e => editForm.setStart(e.target.value)} />
-        </Field>
-        <Field label="End date">
-          <input type="date" value={editForm.end} onChange={e => editForm.setEnd(e.target.value)} />
-        </Field>
-      </FormModal>
+      <Dialog open={editForm.open} onClose={() => editForm.setOpen(false)}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>Edit trip</h2>
+          <button onClick={() => editForm.setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '18px', lineHeight: 1, padding: '4px' }}>✕</button>
+        </div>
+        <form onSubmit={editForm.form.handleSubmit(editForm.handleSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <label style={labelStyle}>Name</label>
+            <input type="text" autoFocus {...editForm.form.register('name')} style={inputStyle(!!editForm.form.formState.errors.name)} onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')} onBlur={e => (e.target.style.boxShadow = 'none')} />
+            {editForm.form.formState.errors.name && <p style={errorStyle}>{editForm.form.formState.errors.name.message}</p>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={labelStyle}>Start date</label>
+              <input type="date" {...editForm.form.register('start_date')} style={inputStyle(false)} onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')} onBlur={e => (e.target.style.boxShadow = 'none')} />
+            </div>
+            <div>
+              <label style={labelStyle}>End date</label>
+              <input type="date" {...editForm.form.register('end_date')} style={inputStyle(false)} onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')} onBlur={e => (e.target.style.boxShadow = 'none')} />
+            </div>
+          </div>
+          {editForm.error && <p style={{ fontSize: '13px', color: 'var(--destructive)', textAlign: 'center' }}>{editForm.error}</p>}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <button type="button" onClick={() => editForm.setOpen(false)} style={{ flex: 1, height: '42px', background: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={editForm.isPending} style={{ ...submitBtnStyle(editForm.isPending), flex: 1, marginTop: 0 }}>{editForm.isPending ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </Dialog>
 
       {/* Add/edit destination modal */}
-      <FormModal
-        open={destForm.open}
-        onClose={destForm.close}
-        title={destForm.editing ? 'Edit destination' : 'Add destination'}
-        onSubmit={destForm.handleSubmit}
-        submitting={destForm.isPending}
-        submitLabel={destForm.editing ? 'Save' : 'Add'}
-        error={destForm.err}
-      >
-        <Field label="City" error={destForm.cityErr}>
-          <input type="text" placeholder="e.g. Paris" autoFocus value={destForm.city} onChange={e => destForm.setCity(e.target.value)} />
-        </Field>
-        <Field label="Country" error={destForm.countryErr}>
-          <input type="text" placeholder="e.g. France" value={destForm.country} onChange={e => destForm.setCountry(e.target.value)} />
-        </Field>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-          <Field label="Arrival">
-            <input type="date" value={destForm.arrival} onChange={e => destForm.setArrival(e.target.value)} />
-          </Field>
-          <Field label="Departure">
-            <input type="date" value={destForm.departure} onChange={e => destForm.setDeparture(e.target.value)} />
-          </Field>
+      <Dialog open={destForm.open} onClose={destForm.close}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>{destForm.editing ? 'Edit destination' : 'Add destination'}</h2>
+          <button onClick={destForm.close} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '18px', lineHeight: 1, padding: '4px' }}>✕</button>
         </div>
-      </FormModal>
+        <form onSubmit={destForm.form.handleSubmit(destForm.handleSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <label style={labelStyle}>City</label>
+            <input type="text" placeholder="e.g. Paris" autoFocus {...destForm.form.register('city')} style={inputStyle(!!destForm.form.formState.errors.city)} onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')} onBlur={e => (e.target.style.boxShadow = 'none')} />
+            {destForm.form.formState.errors.city && <p style={errorStyle}>{destForm.form.formState.errors.city.message}</p>}
+          </div>
+          <div>
+            <label style={labelStyle}>Country</label>
+            <input type="text" placeholder="e.g. France" {...destForm.form.register('country')} style={inputStyle(!!destForm.form.formState.errors.country)} onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')} onBlur={e => (e.target.style.boxShadow = 'none')} />
+            {destForm.form.formState.errors.country && <p style={errorStyle}>{destForm.form.formState.errors.country.message}</p>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+            <div>
+              <label style={labelStyle}>Arrival</label>
+              <input type="date" {...destForm.form.register('arrival_date')} style={inputStyle(false)} onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')} onBlur={e => (e.target.style.boxShadow = 'none')} />
+            </div>
+            <div>
+              <label style={labelStyle}>Departure</label>
+              <input type="date" {...destForm.form.register('departure_date')} style={inputStyle(false)} onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')} onBlur={e => (e.target.style.boxShadow = 'none')} />
+            </div>
+          </div>
+          {destForm.error && <p style={{ fontSize: '13px', color: 'var(--destructive)', textAlign: 'center' }}>{destForm.error}</p>}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <button type="button" onClick={destForm.close} style={{ flex: 1, height: '42px', background: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={destForm.isPending} style={{ ...submitBtnStyle(destForm.isPending), flex: 1, marginTop: 0 }}>{destForm.isPending ? 'Saving…' : destForm.editing ? 'Save' : 'Add'}</button>
+          </div>
+        </form>
+      </Dialog>
 
       <CreateBagModal
         open={createBagOpen}
@@ -264,23 +283,27 @@ export default function TripPage() {
       />
 
       {/* Assign bag modal */}
-      <FormModal
-        open={bagForm.open}
-        onClose={() => bagForm.setOpen(false)}
-        title="Assign bag"
-        onSubmit={bagForm.handleAssign}
-        submitting={bagForm.isPending}
-        submitLabel="Assign"
-        error={bagForm.err}
-      >
-        <Field label="Bag">
-          <select value={bagForm.selectedId} onChange={e => bagForm.setSelectedId(e.target.value)} style={{ cursor: 'pointer' }}>
-            {unassignedBags.map((b: Bag) => (
-              <option key={b.id} value={String(b.id)}>{b.name} ({b.type})</option>
-            ))}
-          </select>
-        </Field>
-      </FormModal>
+      <Dialog open={bagForm.open} onClose={() => bagForm.setOpen(false)}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>Assign bag</h2>
+          <button onClick={() => bagForm.setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '18px', lineHeight: 1, padding: '4px' }}>✕</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <label style={labelStyle}>Bag</label>
+            <select value={bagForm.selectedId} onChange={e => bagForm.setSelectedId(e.target.value)} style={{ ...inputStyle(false), cursor: 'pointer' }}>
+              {unassignedBags.map((b: Bag) => (
+                <option key={b.id} value={String(b.id)}>{b.name} ({b.type})</option>
+              ))}
+            </select>
+          </div>
+          {bagForm.err && <p style={{ fontSize: '13px', color: 'var(--destructive)', textAlign: 'center' }}>{bagForm.err}</p>}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <button type="button" onClick={() => bagForm.setOpen(false)} style={{ flex: 1, height: '42px', background: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+            <button type="button" onClick={bagForm.handleAssign} disabled={bagForm.isPending} style={{ ...submitBtnStyle(bagForm.isPending), flex: 1, marginTop: 0 }}>{bagForm.isPending ? 'Assigning…' : 'Assign'}</button>
+          </div>
+        </div>
+      </Dialog>
 
       <ConfirmModal
         open={confirmTrip}

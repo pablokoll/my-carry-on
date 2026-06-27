@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import { api, clearTokens } from '@/lib/api'
 
 interface Profile {
@@ -14,24 +14,17 @@ interface Profile {
 
 export default function ProfilePage() {
   const router = useRouter()
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    api.get<Profile>('/auth/me')
-      .then(setProfile)
-      .finally(() => setLoading(false))
-  }, [])
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => api.get<Profile>('/auth/me'),
+  })
 
   function handleLogout() {
     clearTokens()
     router.push('/login')
   }
 
-  if (loading) {
-    return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
-  }
-
+  if (isLoading) return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
   if (!profile) return null
 
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -71,17 +64,7 @@ export default function ProfilePage() {
 
       <button
         onClick={handleLogout}
-        style={{
-          background: 'transparent',
-          border: '1px solid var(--destructive)',
-          borderRadius: '8px',
-          color: 'var(--destructive)',
-          padding: '10px 16px',
-          fontSize: '14px',
-          fontWeight: 500,
-          cursor: 'pointer',
-          width: '100%',
-        }}
+        style={{ background: 'transparent', border: '1px solid var(--destructive)', borderRadius: '8px', color: 'var(--destructive)', padding: '10px 16px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', width: '100%' }}
       >
         Sign out
       </button>

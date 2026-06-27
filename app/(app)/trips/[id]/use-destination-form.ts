@@ -1,74 +1,70 @@
 import { useState } from 'react'
-import type { Destination } from '@/lib/queries'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import type { Destination, DestinationInput, UpdateDestinationVars } from '@/lib/queries'
 
-type DestData = { city: string; country: string; arrival_date?: string | null; departure_date?: string | null }
+const schema = z.object({
+  city: z.string().min(1, 'City is required'),
+  country: z.string().min(1, 'Country is required'),
+  arrival_date: z.string().optional(),
+  departure_date: z.string().optional(),
+})
+
+export type DestinationFormData = z.infer<typeof schema>
 
 interface AddMutation {
-  mutateAsync: (data: DestData) => Promise<unknown>
+  mutateAsync: (data: DestinationInput) => Promise<unknown>
   isPending: boolean
 }
 
 interface UpdateMutation {
-  mutateAsync: (args: { destId: number; data: DestData }) => Promise<unknown>
+  mutateAsync: (args: UpdateDestinationVars) => Promise<unknown>
   isPending: boolean
 }
 
 export function useDestinationForm(addDest: AddMutation, updateDest: UpdateMutation) {
   const [open, setOpen] = useState(false)
-  const [city, setCity] = useState('')
-  const [country, setCountry] = useState('')
-  const [arrival, setArrival] = useState('')
-  const [departure, setDeparture] = useState('')
-  const [cityErr, setCityErr] = useState('')
-  const [countryErr, setCountryErr] = useState('')
-  const [err, setErr] = useState('')
   const [editing, setEditing] = useState<Destination | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const form = useForm<DestinationFormData>({ resolver: zodResolver(schema) })
 
   function close() {
-    setOpen(false); setEditing(null)
-    setCity(''); setCountry(''); setArrival(''); setDeparture('')
-    setCityErr(''); setCountryErr(''); setErr('')
+    setOpen(false)
+    setEditing(null)
+    setError(null)
+    form.reset()
   }
 
   function openAdd() {
     setEditing(null)
-    setCity(''); setCountry(''); setArrival(''); setDeparture('')
-    setCityErr(''); setCountryErr(''); setErr('')
+    form.reset({ city: '', country: '', arrival_date: '', departure_date: '' })
+    setError(null)
     setOpen(true)
   }
 
   function openEdit(dest: Destination) {
     setEditing(dest)
-    setCity(dest.city); setCountry(dest.country)
-    setArrival(dest.arrival_date ?? ''); setDeparture(dest.departure_date ?? '')
-    setCityErr(''); setCountryErr(''); setErr('')
+    form.reset({ city: dest.city, country: dest.country, arrival_date: dest.arrival_date ?? '', departure_date: dest.departure_date ?? '' })
+    setError(null)
     setOpen(true)
   }
 
-  async function handleSubmit() {
-    let valid = true
-    if (!city.trim()) { setCityErr('City is required'); valid = false } else setCityErr('')
-    if (!country.trim()) { setCountryErr('Country is required'); valid = false } else setCountryErr('')
-    if (!valid) return
-    setErr('')
-    const data: DestData = { city: city.trim(), country: country.trim(), arrival_date: arrival || null, departure_date: departure || null }
+  async function handleSubmit(data: DestinationFormData) {
+    setError(null)
+    const payload: DestinationInput = { city: data.city, country: data.country, arrival_date: data.arrival_date || null, departure_date: data.departure_date || null }
     try {
       if (editing) {
-        await updateDest.mutateAsync({ destId: editing.id, data })
+        await updateDest.mutateAsync({ destId: editing.id, data: payload })
       } else {
-        await addDest.mutateAsync(data)
+        await addDest.mutateAsync(payload)
       }
       close()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to save destination')
+      setError(e instanceof Error ? e.message : 'Failed to save destination')
     }
   }
 
-  return {
-    open, city, setCity, country, setCountry,
-    arrival, setArrival, departure, setDeparture,
-    cityErr, countryErr, err, editing,
-    close, openAdd, openEdit, handleSubmit,
-    isPending: addDest.isPending || updateDest.isPending,
-  }
+  return { open, editing, error, form, close, openAdd, openEdit, handleSubmit, isPending: addDest.isPending || updateDest.isPending }
 }

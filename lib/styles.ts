@@ -1,5 +1,47 @@
 import type { CSSProperties } from 'react'
 
+export const inputStyle = (hasError: boolean): CSSProperties => ({
+  width: '100%',
+  height: '40px',
+  padding: '0 12px',
+  fontSize: '14px',
+  color: 'var(--foreground)',
+  background: 'var(--background)',
+  border: `1px solid ${hasError ? 'var(--destructive)' : 'var(--border)'}`,
+  borderRadius: '8px',
+  outline: 'none',
+  boxSizing: 'border-box',
+  transition: 'border-color var(--duration-2) var(--ease)',
+})
+
+export const labelStyle: CSSProperties = {
+  display: 'block',
+  fontSize: '13px',
+  fontWeight: 500,
+  color: 'var(--foreground)',
+  marginBottom: '6px',
+}
+
+export const errorStyle: CSSProperties = {
+  fontSize: '12px',
+  color: 'var(--destructive)',
+  marginTop: '4px',
+}
+
+export const submitBtnStyle = (disabled: boolean): CSSProperties => ({
+  width: '100%',
+  height: '42px',
+  background: disabled ? 'var(--fg-muted)' : 'var(--primary)',
+  color: '#fff',
+  fontWeight: 600,
+  fontSize: '14px',
+  border: 'none',
+  borderRadius: '8px',
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  transition: 'background var(--duration-2) var(--ease)',
+  marginTop: '4px',
+})
+
 export const btnPrimary: CSSProperties = {
   height: '36px',
   padding: '0 18px',
