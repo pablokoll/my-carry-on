@@ -1,148 +1,17 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useState } from 'react'
-import { clearTokens } from '@/lib/api'
-import { useTrips, useCreateTrip } from '@/lib/queries'
+import Link from 'next/link'
+import { useTrips, useCreateTrip, type Trip } from '@/lib/queries'
 import { CreateTripModal } from '@/components/create-trip-modal'
-import type { Trip } from '@/lib/queries'
-
-interface BagSummary {
-  id: number
-  name: string
-  type: string
-  items_total: number
-  items_packed: number
-}
-
-const btnPrimary: React.CSSProperties = {
-  background: 'var(--primary)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '8px 16px',
-  fontSize: '14px',
-  fontWeight: 500,
-  cursor: 'pointer',
-}
-
-function formatDate(d: string | null) {
-  if (!d) return null
-  return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-
-function daysUntil(d: string | null): number | null {
-  if (!d) return null
-  const diff = new Date(d + 'T00:00:00').getTime() - new Date().setHours(0, 0, 0, 0)
-  return Math.ceil(diff / 86400000)
-}
-
-function ProgressBar({ value, total, color = 'var(--primary)' }: { value: number; total: number; color?: string }) {
-  const pct = total === 0 ? 0 : Math.round((value / total) * 100)
-  return (
-    <div style={{ position: 'relative', height: '6px', borderRadius: '99px', background: 'var(--border)', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${pct}%`, background: color, borderRadius: '99px', transition: 'width 400ms ease' }} />
-    </div>
-  )
-}
-
-function ActiveTripCard({ trip }: { trip: Trip }) {
-  const days = daysUntil(trip.start_date)
-  const pct = (trip.items_total ?? 0) === 0 ? 0 : Math.round(((trip.items_packed ?? 0) / (trip.items_total ?? 1)) * 100)
-  const allDone = (trip.items_total ?? 0) > 0 && trip.items_packed === trip.items_total
-  const bags = (trip.bags ?? []) as BagSummary[]
-
-  return (
-    <Link href={`/trips/${trip.id}`} style={{ textDecoration: 'none' }}>
-      <div style={{
-        background: 'var(--card)',
-        border: '1px solid var(--border)',
-        borderRadius: '14px',
-        padding: '20px',
-        marginBottom: '28px',
-        boxShadow: 'var(--shadow-sm)',
-        cursor: 'pointer',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '99px', background: allDone ? 'rgba(94,164,110,0.15)' : 'rgba(74,123,181,0.1)', color: allDone ? '#5ea46e' : 'var(--primary)', letterSpacing: '0.04em' }}>
-                {allDone ? 'READY' : 'ACTIVE'}
-              </span>
-              {days !== null && (
-                <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>
-                  {days === 0 ? 'Today!' : days < 0 ? `${Math.abs(days)}d ago` : `${days}d to go`}
-                </span>
-              )}
-            </div>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--foreground)', margin: 0 }}>{trip.name}</h2>
-            {(trip.start_date || trip.end_date) && (
-              <p style={{ fontSize: '13px', color: 'var(--fg-muted)', margin: '4px 0 0' }}>
-                {formatDate(trip.start_date) ?? '—'} → {formatDate(trip.end_date) ?? '—'}
-              </p>
-            )}
-          </div>
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: allDone ? '#5ea46e' : 'var(--primary)', lineHeight: 1 }}>{pct}%</div>
-            <div style={{ fontSize: '11px', color: 'var(--fg-muted)', marginTop: '2px' }}>packed</div>
-          </div>
-        </div>
-
-        {(trip.items_total ?? 0) > 0 && (
-          <div style={{ marginBottom: '16px' }}>
-            <ProgressBar value={trip.items_packed ?? 0} total={trip.items_total ?? 0} color={allDone ? '#5ea46e' : 'var(--primary)'} />
-            <p style={{ fontSize: '12px', color: 'var(--fg-muted)', margin: '6px 0 0' }}>
-              {trip.items_packed} / {trip.items_total} items packed
-            </p>
-          </div>
-        )}
-
-        {bags.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {bags.map(bag => {
-              const bagDone = bag.items_total > 0 && bag.items_packed === bag.items_total
-              return (
-                <div key={bag.id}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--foreground)' }}>{bag.name}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--fg-muted)', background: 'var(--bg-surface)', borderRadius: '4px', padding: '1px 6px' }}>{bag.type}</span>
-                    </div>
-                    <span style={{ fontSize: '12px', color: bagDone ? '#5ea46e' : 'var(--fg-muted)', fontWeight: bagDone ? 600 : 400 }}>
-                      {bag.items_total === 0 ? 'empty' : bagDone ? 'done' : `${bag.items_packed}/${bag.items_total}`}
-                    </span>
-                  </div>
-                  <ProgressBar value={bag.items_packed} total={bag.items_total} color={bagDone ? '#5ea46e' : 'var(--primary)'} />
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {bags.length === 0 && (
-          <p style={{ fontSize: '13px', color: 'var(--fg-muted)', margin: 0 }}>No bags assigned yet.</p>
-        )}
-      </div>
-    </Link>
-  )
-}
+import { ActiveTripCard } from '@/components/active-trip-card'
+import { btnPrimary } from '@/lib/styles'
+import { formatDate } from '@/lib/utils'
 
 export default function DashboardPage() {
-  const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
-  const { data: trips = [], isLoading, isError } = useTrips()
+  const { data: trips = [], isLoading } = useTrips()
   const createTrip = useCreateTrip()
-
-  useEffect(() => {
-    const token = localStorage.getItem('access_token')
-    if (!token) { router.replace('/login') }
-  }, [router])
-
-  useEffect(() => {
-    if (isError) { clearTokens(); router.replace('/login') }
-  }, [isError, router])
 
   if (isLoading) {
     return <p style={{ color: 'var(--fg-muted)', fontSize: '14px', textAlign: 'center', paddingTop: '48px' }}>Loading…</p>
@@ -214,10 +83,7 @@ export default function DashboardPage() {
       <CreateTripModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        onCreated={() => {
-          setModalOpen(false)
-          createTrip.reset()
-        }}
+        onCreated={() => { setModalOpen(false); createTrip.reset() }}
       />
     </>
   )
