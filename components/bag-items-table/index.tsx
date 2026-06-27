@@ -1,33 +1,53 @@
-'use client'
+"use client";
 
-import { btnPrimary } from '@/lib/styles'
-import { useBagItems } from './use-bag-items'
-import { ItemTableView } from './item-table-view'
-import { ItemTableEdit } from './item-table-edit'
-import type { Category, Item } from './types'
+import { btnPrimary } from "@/lib/styles";
+import { ItemTableEdit } from "./item-table-edit";
+import { ItemTableView } from "./item-table-view";
+import type { Category, Item } from "./types";
+import { useBagItems } from "./use-bag-items";
 
-export type { Category, Item }
-export { catColor } from './constants'
+export { catColor } from "./constants";
+export type { Category, Item };
 
 interface BagItemsTableProps {
-  bagId: number
-  initialItems: Item[]
-  categories: Category[]
-  onItemsChange?: (items: Item[]) => void
-  showPacked?: boolean
+  bagId: number;
+  initialItems: Item[];
+  categories: Category[];
+  onItemsChange?: (items: Item[]) => void;
+  showPacked?: boolean;
 }
 
-export function BagItemsTable({ bagId, initialItems, categories, onItemsChange, showPacked = true }: BagItemsTableProps) {
-  const state = useBagItems({ bagId, initialItems, categories, onItemsChange })
-  const isEmpty = state.serverItems.length === 0 && !state.editMode
+export function BagItemsTable({
+  bagId,
+  initialItems,
+  categories,
+  onItemsChange,
+  showPacked = true,
+}: BagItemsTableProps) {
+  const state = useBagItems({ bagId, initialItems, categories, onItemsChange });
+  const isEmpty = state.serverItems.length === 0 && !state.editMode;
 
   if (isEmpty) {
     return (
-      <div style={{ padding: '24px 0', textAlign: 'center' }}>
-        <p style={{ color: 'var(--fg-muted)', fontSize: '14px', marginBottom: '12px' }}>No items yet.</p>
-        <button style={{ ...btnPrimary, height: '34px', fontSize: '13px' }} onClick={state.enterEdit}>Add items</button>
+      <div style={{ padding: "24px 0", textAlign: "center" }}>
+        <p
+          style={{
+            color: "var(--fg-muted)",
+            fontSize: "14px",
+            marginBottom: "12px",
+          }}
+        >
+          No items yet.
+        </p>
+        <button
+          type="button"
+          style={{ ...btnPrimary, height: "34px", fontSize: "13px" }}
+          onClick={state.enterEdit}
+        >
+          Add items
+        </button>
       </div>
-    )
+    );
   }
 
   if (state.editMode) {
@@ -53,7 +73,7 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange, 
         cancelEdit={state.cancelEdit}
         handleSave={state.handleSave}
       />
-    )
+    );
   }
 
   return (
@@ -72,5 +92,5 @@ export function BagItemsTable({ bagId, initialItems, categories, onItemsChange, 
       togglePacked={state.togglePacked}
       toggleSubPacked={state.toggleSubPacked}
     />
-  )
+  );
 }

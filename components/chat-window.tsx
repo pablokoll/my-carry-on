@@ -1,26 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import ReactMarkdown from "react-markdown";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import type { ChatMessage, ChatSession } from "@/lib/queries";
 import {
   keys,
-  useTrips,
+  useAddBagItem,
+  useAddSubItem,
   useCategories,
-  useChatSessions,
   useChatMessages,
+  useChatSessions,
+  useClearChatMessages,
+  useCreateBagWithItems,
   useCreateChatSession,
   useDeleteChatSession,
-  useClearChatMessages,
-  useSendChatMessage,
   useLogChatContext,
-  useAddBagItem,
+  useSendChatMessage,
+  useTrips,
   useUpdateItem,
-  useAddSubItem,
-  useCreateBagWithItems,
 } from "@/lib/queries";
-import type { ChatSession, ChatMessage } from "@/lib/queries";
 
 type Mode = "popup" | "fullscreen";
 type View = "sessions" | "chat";
@@ -93,7 +93,7 @@ function useCountdown(seconds: number, onDone: () => void) {
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [seconds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [seconds, onDone]); // eslint-disable-line react-hooks/exhaustive-deps
   return remaining;
 }
 
@@ -207,6 +207,7 @@ function TripSelector({
       </p>
       {trips.slice(0, 3).map((t) => (
         <button
+          type="button"
           key={t.id}
           onClick={() => onSelect(t)}
           style={{
@@ -298,6 +299,7 @@ function SessionList({
         }}
       >
         <button
+          type="button"
           onClick={onBack}
           style={{
             background: "none",
@@ -326,6 +328,7 @@ function SessionList({
           </div>
         </div>
         <button
+          type="button"
           onClick={onCreate}
           style={{
             background: "var(--primary)",
@@ -386,6 +389,7 @@ function SessionList({
               No chats yet.
             </p>
             <button
+              type="button"
               onClick={onCreate}
               style={{
                 background: "var(--primary)",
@@ -415,29 +419,73 @@ function SessionList({
                 transition: "box-shadow 150ms",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-sm)";
+                (e.currentTarget as HTMLElement).style.boxShadow =
+                  "var(--shadow-sm)";
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLElement).style.boxShadow = "none";
               }}
             >
               <button
+                type="button"
                 onClick={() => onSelect(s)}
-                style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "left", minWidth: 0, padding: 0 }}
+                style={{
+                  flex: 1,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  minWidth: 0,
+                  padding: 0,
+                }}
               >
-                <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    color: "var(--foreground)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {s.title ?? "New chat"}
                 </div>
-                <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "2px", display: "flex", gap: "8px" }}>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "var(--fg-muted)",
+                    marginTop: "2px",
+                    display: "flex",
+                    gap: "8px",
+                  }}
+                >
                   <span>{new Date(s.created_at).toLocaleDateString()}</span>
-                  {s.message_count > 0 && <span>{s.message_count} messages</span>}
+                  {s.message_count > 0 && (
+                    <span>{s.message_count} messages</span>
+                  )}
                 </div>
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); onDelete(s.id); }}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(s.id);
+                }}
                 title="Delete chat"
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-muted)", fontSize: "16px", lineHeight: 1, padding: "2px 4px", flexShrink: 0 }}
-              >×</button>
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--fg-muted)",
+                  fontSize: "16px",
+                  lineHeight: 1,
+                  padding: "2px 4px",
+                  flexShrink: 0,
+                }}
+              >
+                ×
+              </button>
             </div>
           ))
         )}
@@ -602,6 +650,7 @@ function SuggestionCards({
               </div>
               <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
                 <button
+                  type="button"
                   onClick={() => onAccept(s)}
                   disabled={isDisabled}
                   style={{
@@ -619,6 +668,7 @@ function SuggestionCards({
                   {isAccepting ? "…" : isCreateBag ? "Create" : "Add"}
                 </button>
                 <button
+                  type="button"
                   onClick={() => onDecline(s)}
                   disabled={isDisabled}
                   style={{
@@ -686,10 +736,12 @@ function ChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { data: messagesData, isLoading: messagesLoading } = useChatMessages(session.id);
-  const messages: ChatMessage[] = (messagesData ?? [] as ChatMessage[]).filter(
-    (m: ChatMessage) => !m.content.startsWith("[system:"),
+  const { data: messagesData, isLoading: messagesLoading } = useChatMessages(
+    session.id,
   );
+  const messages: ChatMessage[] = (
+    messagesData ?? ([] as ChatMessage[])
+  ).filter((m: ChatMessage) => !m.content.startsWith("[system:"));
   const historyLoaded = !messagesLoading;
 
   const clearChatMessages = useClearChatMessages(session.id);
@@ -702,11 +754,11 @@ function ChatPanel({
 
   useEffect(() => {
     setSuggestions([]);
-  }, [session.id]);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading, suggestions]);
+  }, []);
 
   const countdown = useCountdown(rateLimitSeconds, () =>
     setRateLimitSeconds(0),
@@ -718,7 +770,7 @@ function ChatPanel({
     setInput(e.target.value);
     const el = e.target;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }
 
   async function handleSend() {
@@ -736,8 +788,9 @@ function ChatPanel({
       created_at: new Date().toISOString(),
     };
     // Optimistically add user message to cache
-    qc.setQueryData(keys.chatMessages(session.id), (prev: ChatMessage[] | undefined) =>
-      [...(prev ?? []), optimistic],
+    qc.setQueryData(
+      keys.chatMessages(session.id),
+      (prev: ChatMessage[] | undefined) => [...(prev ?? []), optimistic],
     );
     try {
       const data = await sendChatMessage.mutateAsync({
@@ -746,7 +799,9 @@ function ChatPanel({
       });
       qc.setQueryData(
         keys.chatMessages(session.id),
-        data.history.filter((m: ChatMessage) => !m.content.startsWith("[system:")),
+        data.history.filter(
+          (m: ChatMessage) => !m.content.startsWith("[system:"),
+        ),
       );
       if (data.session_title) {
         onSessionTitleUpdate(session.id, data.session_title);
@@ -754,7 +809,7 @@ function ChatPanel({
       }
       const seen = new Set<string>();
       setSuggestions(
-        (data.suggestions as Suggestion[] ?? []).filter((s) => {
+        ((data.suggestions as Suggestion[]) ?? []).filter((s) => {
           const k = suggestionKey(s);
           if (seen.has(k)) return false;
           seen.add(k);
@@ -764,8 +819,10 @@ function ChatPanel({
     } catch (e) {
       const err = e as ApiError;
       // Remove optimistic message on error
-      qc.setQueryData(keys.chatMessages(session.id), (prev: ChatMessage[] | undefined) =>
-        (prev ?? []).filter((m) => m.id !== optimistic.id),
+      qc.setQueryData(
+        keys.chatMessages(session.id),
+        (prev: ChatMessage[] | undefined) =>
+          (prev ?? []).filter((m) => m.id !== optimistic.id),
       );
       if (err.status === 429) {
         const type = err.error === "rate_limit_daily" ? "rpd" : "rpm";
@@ -810,7 +867,9 @@ function ChatPanel({
             queryKey: keys.bagItems(s.bag_id),
             queryFn: () =>
               import("@/lib/api").then(({ api }) =>
-                api.get<{ id: number; name: string }[]>(`/bags/${s.bag_id}/items`),
+                api.get<{ id: number; name: string }[]>(
+                  `/bags/${s.bag_id}/items`,
+                ),
               ),
           });
           const match = bagItems.find(
@@ -835,7 +894,10 @@ function ChatPanel({
           });
           realItemId = (created as { id: number }).id;
         } else if (s.also_convert_original && s.original_name) {
-          await updateItem.mutateAsync({ itemId: realItemId, data: { name: s.item_name } });
+          await updateItem.mutateAsync({
+            itemId: realItemId,
+            data: { name: s.item_name },
+          });
           await addSubItem.mutateAsync({
             itemId: realItemId,
             data: { name: s.original_name, quantity: 1 },
@@ -843,7 +905,10 @@ function ChatPanel({
         }
         await addSubItem.mutateAsync({
           itemId: realItemId,
-          data: { name: s.new_sub_item.name, quantity: s.new_sub_item.quantity },
+          data: {
+            name: s.new_sub_item.name,
+            quantity: s.new_sub_item.quantity,
+          },
         });
         confirmation = `[system: user accepted — added variant "${s.new_sub_item.name}" to item "${s.item_name}" in bag "${s.bag_name}"]`;
       } else {
@@ -912,6 +977,7 @@ function ChatPanel({
         }}
       >
         <button
+          type="button"
           onClick={onBack}
           style={{
             background: "none",
@@ -945,6 +1011,7 @@ function ChatPanel({
         {/* Session menu */}
         <div style={{ position: "relative", flexShrink: 0 }}>
           <button
+            type="button"
             onClick={() => setMenuOpen((o) => !o)}
             style={{
               background: "none",
@@ -961,6 +1028,7 @@ function ChatPanel({
           </button>
           {menuOpen && (
             <>
+              {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop dismiss */}
               <div
                 style={{ position: "fixed", inset: 0, zIndex: 10 }}
                 onClick={() => setMenuOpen(false)}
@@ -980,6 +1048,7 @@ function ChatPanel({
                 }}
               >
                 <button
+                  type="button"
                   onClick={handleClear}
                   style={{
                     display: "block",
@@ -996,7 +1065,11 @@ function ChatPanel({
                   Clear messages
                 </button>
                 <button
-                  onClick={() => { setMenuOpen(false); onDeleteSession(session.id); }}
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDeleteSession(session.id);
+                  }}
                   style={{
                     display: "block",
                     width: "100%",
@@ -1102,14 +1175,18 @@ function ChatPanel({
           {rateLimitType === "rpd" ? (
             <>
               <span>Límite diario alcanzado. Se restablece en</span>
-              <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+              <span
+                style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
+              >
                 {formatTime(countdown)}
               </span>
             </>
           ) : (
             <>
               <span>Límite alcanzado. Podés continuar en</span>
-              <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+              <span
+                style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
+              >
                 {formatTime(countdown)}
               </span>
             </>
@@ -1176,6 +1253,7 @@ function ChatPanel({
           }}
         />
         <button
+          type="button"
           onClick={handleSend}
           disabled={!input.trim() || loading || blocked}
           style={{
@@ -1210,7 +1288,9 @@ export function ChatWindow() {
   const [mode, setMode] = useState<Mode>("popup");
   const [view, setView] = useState<View>("sessions");
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
-  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
+  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(
+    null,
+  );
 
   const { data: tripsData, isSuccess: tripsLoaded } = useTrips();
   const trips: Trip[] = tripsData ?? [];
@@ -1241,12 +1321,14 @@ export function ChatWindow() {
     }
     const active = trips.find((t) => t.is_active);
     if (active && !selectedTrip) setSelectedTrip(active);
-  }, [open, pathname, trips, tripsLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, pathname, trips, tripsLoaded, selectedTrip?.id, selectedTrip]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCreateSession() {
     if (!selectedTrip) return;
     try {
-      const s = await createChatSession.mutateAsync({ trip_id: selectedTrip.id });
+      const s = await createChatSession.mutateAsync({
+        trip_id: selectedTrip.id,
+      });
       setSelectedSession(s);
       setView("chat");
     } catch {
@@ -1276,7 +1358,9 @@ export function ChatWindow() {
     if (!selectedTrip) return;
     try {
       await deleteChatSession.mutateAsync({ id, tripId: selectedTrip.id });
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
     setSelectedSession(null);
     setView("sessions");
   }
@@ -1336,6 +1420,7 @@ export function ChatWindow() {
   return (
     <>
       <button
+        type="button"
         onClick={toggleOpen}
         aria-label="Open packing assistant"
         style={{
@@ -1392,6 +1477,7 @@ export function ChatWindow() {
             </span>
             <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
               <button
+                type="button"
                 onClick={toggleFullscreen}
                 title={mode === "popup" ? "Expand" : "Minimize"}
                 style={{
@@ -1408,6 +1494,7 @@ export function ChatWindow() {
                 {mode === "popup" ? "⤢" : "⤡"}
               </button>
               <button
+                type="button"
                 onClick={() => setOpen(false)}
                 style={{
                   background: "none",

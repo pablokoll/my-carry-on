@@ -1,5 +1,5 @@
 // Empty string fallback works because vercel.json mounts Flask at /api on the same origin (dev and prod)
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "") + "/api";
+const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api`;
 
 function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -53,8 +53,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (token) {
       res = await makeRequest(token);
     } else {
-      window.location.replace('/login');
-      throw new Error('Session expired');
+      window.location.replace("/login");
+      throw new Error("Session expired");
     }
   }
 

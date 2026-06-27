@@ -1,37 +1,51 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { api, setTokens } from '@/lib/api'
-import { AuthShell, inputStyle, labelStyle, errorStyle, submitBtnStyle, footerLinkStyle } from '../auth-layout'
+import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { api, setTokens } from "@/lib/api";
+import {
+  AuthShell,
+  errorStyle,
+  footerLinkStyle,
+  inputStyle,
+  labelStyle,
+  submitBtnStyle,
+} from "../auth-layout";
 
 const schema = z.object({
-  email: z.string().email('Invalid email'),
-  password: z.string().min(1, 'Password is required'),
-})
+  email: z.string().email("Invalid email"),
+  password: z.string().min(1, "Password is required"),
+});
 
-type FormData = z.infer<typeof schema>
+type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
-  })
+  });
 
   async function onSubmit(data: FormData) {
-    setError(null)
+    setError(null);
     try {
-      const res = await api.post<{ access_token: string; refresh_token: string }>('/auth/login', data)
-      setTokens(res.access_token, res.refresh_token)
-      router.push('/')
+      const res = await api.post<{
+        access_token: string;
+        refresh_token: string;
+      }>("/auth/login", data);
+      setTokens(res.access_token, res.refresh_token);
+      router.push("/");
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Login failed')
+      setError(e instanceof Error ? e.message : "Login failed");
     }
   }
 
@@ -39,43 +53,75 @@ export default function LoginPage() {
     <AuthShell
       title="Welcome back"
       description="Sign in to your account"
-      footer={<>Don&apos;t have an account?{' '}<Link href="/register" style={footerLinkStyle}>Sign up</Link></>}
+      footer={
+        <>
+          Don&apos;t have an account?{" "}
+          <Link href="/register" style={footerLinkStyle}>
+            Sign up
+          </Link>
+        </>
+      }
     >
-      <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+      >
         <div>
-          <label style={labelStyle}>Email</label>
+          <label htmlFor="email" style={labelStyle}>
+            Email
+          </label>
           <input
+            id="email"
             type="email"
             placeholder="you@example.com"
             autoComplete="email"
-            {...register('email')}
+            {...register("email")}
             style={inputStyle(!!errors.email)}
-            onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')}
-            onBlur={e => (e.target.style.boxShadow = 'none')}
+            onFocus={(e) => (e.target.style.boxShadow = "var(--shadow-focus)")}
+            onBlur={(e) => (e.target.style.boxShadow = "none")}
           />
           {errors.email && <p style={errorStyle}>{errors.email.message}</p>}
         </div>
 
         <div>
-          <label style={labelStyle}>Password</label>
+          <label htmlFor="password" style={labelStyle}>
+            Password
+          </label>
           <input
+            id="password"
             type="password"
             placeholder="••••••••"
             autoComplete="current-password"
-            {...register('password')}
+            {...register("password")}
             style={inputStyle(!!errors.password)}
-            onFocus={e => (e.target.style.boxShadow = 'var(--shadow-focus)')}
-            onBlur={e => (e.target.style.boxShadow = 'none')}
+            onFocus={(e) => (e.target.style.boxShadow = "var(--shadow-focus)")}
+            onBlur={(e) => (e.target.style.boxShadow = "none")}
           />
-          {errors.password && <p style={errorStyle}>{errors.password.message}</p>}
+          {errors.password && (
+            <p style={errorStyle}>{errors.password.message}</p>
+          )}
         </div>
 
-        {error && <p style={{ fontSize: '13px', color: 'var(--destructive)', textAlign: 'center' }}>{error}</p>}
+        {error && (
+          <p
+            style={{
+              fontSize: "13px",
+              color: "var(--destructive)",
+              textAlign: "center",
+            }}
+          >
+            {error}
+          </p>
+        )}
 
-        <button type="submit" disabled={isSubmitting} style={submitBtnStyle(isSubmitting)}>
-          {isSubmitting ? 'Signing in…' : 'Sign in'}
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          style={submitBtnStyle(isSubmitting)}
+        >
+          {isSubmitting ? "Signing in…" : "Sign in"}
         </button>
       </form>
     </AuthShell>
-  )
+  );
 }

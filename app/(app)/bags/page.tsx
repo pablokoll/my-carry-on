@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { useAllBags, useDeleteBag, useDuplicateBag } from "@/lib/queries";
+import { useState } from "react";
 import { CreateBagModal } from "@/components/create-bag-modal";
-import type { Bag } from "@/lib/queries";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { TypeBadge } from "@/components/ui/type-badge";
-import { btnPrimary, btnDestructive } from "@/lib/styles";
+import type { Bag } from "@/lib/queries";
+import { useAllBags, useDeleteBag, useDuplicateBag } from "@/lib/queries";
+import { btnDestructive, btnPrimary } from "@/lib/styles";
 
 export default function BagsPage() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -52,7 +52,11 @@ export default function BagsPage() {
         >
           Bags
         </h2>
-        <button style={btnPrimary} onClick={() => setModalOpen(true)}>
+        <button
+          type="button"
+          style={btnPrimary}
+          onClick={() => setModalOpen(true)}
+        >
           New bag
         </button>
       </div>
@@ -68,7 +72,11 @@ export default function BagsPage() {
           >
             No bags yet.
           </p>
-          <button style={btnPrimary} onClick={() => setModalOpen(true)}>
+          <button
+            type="button"
+            style={btnPrimary}
+            onClick={() => setModalOpen(true)}
+          >
             Prepare your first bag
           </button>
         </div>
@@ -88,22 +96,45 @@ export default function BagsPage() {
                   textDecoration: "none",
                 }}
               >
-                <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)", marginRight: "10px" }}>
+                <span
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "var(--foreground)",
+                    marginRight: "10px",
+                  }}
+                >
                   {bag.name}
                 </span>
                 <TypeBadge type={bag.type} />
               </Link>
               <div
-                style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", display: "flex", gap: "4px" }}
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  display: "flex",
+                  gap: "4px",
+                }}
               >
                 <button
+                  type="button"
                   style={{ ...btnDestructive, color: "var(--fg-muted)" }}
-                  disabled={duplicateBag.isPending && duplicateBag.variables === bag.id}
+                  disabled={
+                    duplicateBag.isPending && duplicateBag.variables === bag.id
+                  }
                   onClick={() => duplicateBag.mutate(bag.id)}
                 >
-                  {duplicateBag.isPending && duplicateBag.variables === bag.id ? "…" : "Duplicate"}
+                  {duplicateBag.isPending && duplicateBag.variables === bag.id
+                    ? "…"
+                    : "Duplicate"}
                 </button>
-                <button style={btnDestructive} onClick={() => setConfirmId(bag.id)}>
+                <button
+                  type="button"
+                  style={btnDestructive}
+                  onClick={() => setConfirmId(bag.id)}
+                >
                   Delete
                 </button>
               </div>
