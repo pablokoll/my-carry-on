@@ -26,10 +26,18 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --color-surface: var(--bg-surface);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-muted: var(--fg-muted);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-xs: var(--shadow-xs-val);
+  --shadow-sm: var(--shadow-sm-val);
+  --shadow-md: var(--shadow-md-val);
 }
 
 :root {
@@ -57,9 +65,9 @@
   --input: #dde2ec;
   --ring: #4a7bb5;
   --radius: 0.625rem;
-  --shadow-xs: 0 1px 2px 0 rgba(28,35,51,0.04);
-  --shadow-sm: 0 1px 3px 0 rgba(28,35,51,0.06), 0 1px 2px 0 rgba(28,35,51,0.04);
-  --shadow-md: 0 4px 6px -1px rgba(28,35,51,0.08), 0 2px 4px -1px rgba(28,35,51,0.05);
+  --shadow-xs-val: 0 1px 2px 0 rgba(28,35,51,0.04);
+  --shadow-sm-val: 0 1px 3px 0 rgba(28,35,51,0.06), 0 1px 2px 0 rgba(28,35,51,0.04);
+  --shadow-md-val: 0 4px 6px -1px rgba(28,35,51,0.08), 0 2px 4px -1px rgba(28,35,51,0.05);
   --shadow-focus: 0 0 0 3px rgba(74,123,181,0.20);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --duration-1: 120ms;
@@ -95,6 +103,10 @@
     box-sizing: border-box;
   }
 
+  button {
+    cursor: pointer;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
@@ -105,5 +117,199 @@
   ::selection {
     background: rgba(74, 123, 181, 0.25);
     color: var(--foreground);
+  }
+}
+
+@layer components {
+  /* Form inputs */
+  .field-input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    font-size: 14px;
+    color: var(--foreground);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    transition: border-color var(--duration-2) var(--ease), box-shadow var(--duration-2) var(--ease);
+  }
+  .field-input:focus {
+    box-shadow: var(--shadow-focus);
+  }
+  .field-input.is-error {
+    border-color: var(--destructive);
+  }
+
+  /* Table cell inputs */
+  .cell-input {
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--foreground);
+    outline: none;
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .cell-input:focus {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-focus);
+  }
+  .cell-input.is-error {
+    border-color: var(--destructive);
+  }
+
+  .qty-input {
+    width: 64px;
+    height: 36px;
+    padding: 0 8px;
+    font-size: 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--foreground);
+    outline: none;
+    text-align: center;
+  }
+  .qty-input:focus {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-focus);
+  }
+
+  /* Buttons */
+  .btn-primary {
+    height: 36px;
+    padding: 0 18px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--duration-2) var(--ease);
+  }
+  .btn-primary:hover {
+    background: color-mix(in srgb, var(--primary) 85%, #000);
+  }
+
+  .btn-secondary {
+    height: 36px;
+    padding: 0 18px;
+    background: transparent;
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--duration-2) var(--ease);
+  }
+  .btn-secondary:hover {
+    background: var(--bg-surface);
+  }
+
+  .btn-destructive {
+    background: transparent;
+    border: none;
+    color: var(--destructive);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 8px;
+    transition: opacity var(--duration-1) var(--ease);
+  }
+  .btn-destructive:hover {
+    opacity: 0.75;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 8px;
+    transition: color var(--duration-1) var(--ease);
+  }
+  .btn-ghost:hover {
+    color: var(--foreground);
+  }
+
+  .btn-link {
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 0;
+    font-weight: 500;
+    transition: opacity var(--duration-1) var(--ease);
+  }
+  .btn-link:hover {
+    opacity: 0.8;
+  }
+
+  .btn-submit {
+    width: 100%;
+    height: 42px;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background var(--duration-2) var(--ease);
+    margin-top: 4px;
+  }
+  .btn-submit:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--primary) 85%, #000);
+  }
+  .btn-submit:disabled {
+    background: var(--fg-muted);
+    cursor: not-allowed;
+  }
+
+  /* Category select */
+  .cat-select {
+    width: 100%;
+    height: 36px;
+    padding: 0 8px;
+    font-size: 13px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--foreground);
+    outline: none;
+    cursor: pointer;
+  }
+
+  /* Trip/bag list card hover */
+  .card-hover {
+    transition: box-shadow var(--duration-2) var(--ease), transform var(--duration-2) var(--ease);
+  }
+  .card-hover:hover {
+    box-shadow: var(--shadow-md-val);
+    transform: translateY(-2px);
+  }
+
+  /* Nav active link */
+  .nav-link-active {
+    background: rgba(74,123,181,0.08);
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  /* Burger bar spans */
+  .burger-bar {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+    transition: transform var(--duration-2) var(--ease), opacity var(--duration-2) var(--ease);
   }
 }

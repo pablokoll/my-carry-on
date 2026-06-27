@@ -26,14 +26,7 @@ export default function ProfilePage() {
 
   if (isLoading)
     return (
-      <p
-        style={{
-          color: "var(--fg-muted)",
-          fontSize: "14px",
-          textAlign: "center",
-          paddingTop: "48px",
-        }}
-      >
+      <p className="text-[color:var(--fg-muted)] text-sm text-center pt-12">
         Loading…
       </p>
     );
@@ -45,164 +38,54 @@ export default function ProfilePage() {
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-      <h2
-        style={{
-          fontSize: "20px",
-          fontWeight: 600,
-          color: "var(--foreground)",
-          margin: 0,
-        }}
-      >
-        Profile
-      </h2>
+    <div className="flex flex-col gap-4">
+      <h2 className="text-xl font-semibold text-foreground m-0">Profile</h2>
 
-      <div
-        style={{
-          background: "var(--bg-surface)",
-          borderRadius: "12px",
-          padding: "20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-        }}
-      >
+      <div className="bg-[var(--bg-surface)] rounded-xl p-5 flex flex-col gap-3">
         <div>
-          <p
-            style={{
-              fontSize: "12px",
-              color: "var(--fg-muted)",
-              margin: "0 0 2px",
-            }}
-          >
+          <p className="text-xs text-[color:var(--fg-muted)] mt-0 mb-0.5">
             Email
           </p>
-          <p
-            style={{
-              fontSize: "15px",
-              fontWeight: 500,
-              color: "var(--foreground)",
-              margin: 0,
-            }}
-          >
+          <p className="text-[15px] font-medium text-foreground m-0">
             {profile.email}
           </p>
         </div>
         <div>
-          <p
-            style={{
-              fontSize: "12px",
-              color: "var(--fg-muted)",
-              margin: "0 0 2px",
-            }}
-          >
+          <p className="text-xs text-[color:var(--fg-muted)] mt-0 mb-0.5">
             Member since
           </p>
-          <p
-            style={{
-              fontSize: "15px",
-              fontWeight: 500,
-              color: "var(--foreground)",
-              margin: 0,
-            }}
-          >
+          <p className="text-[15px] font-medium text-foreground m-0">
             {memberSince}
           </p>
         </div>
       </div>
 
-      <div
-        style={{
-          background: "var(--bg-surface)",
-          borderRadius: "12px",
-          padding: "20px",
-        }}
-      >
-        <p
-          style={{
-            fontSize: "12px",
-            color: "var(--fg-muted)",
-            margin: "0 0 14px",
-          }}
-        >
+      <div className="bg-[var(--bg-surface)] rounded-xl p-5">
+        <p className="text-xs text-[color:var(--fg-muted)] mt-0 mb-3.5">
           Stats
         </p>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "12px",
-            textAlign: "center",
-          }}
-        >
-          <div>
-            <p
-              style={{
-                fontSize: "24px",
-                fontWeight: 700,
-                color: "var(--primary)",
-                margin: "0 0 2px",
-              }}
-            >
-              {profile.trip_count}
-            </p>
-            <p
-              style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0 }}
-            >
-              trips
-            </p>
-          </div>
-          <div>
-            <p
-              style={{
-                fontSize: "24px",
-                fontWeight: 700,
-                color: "var(--primary)",
-                margin: "0 0 2px",
-              }}
-            >
-              {profile.destination_count}
-            </p>
-            <p
-              style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0 }}
-            >
-              destinations
-            </p>
-          </div>
-          <div>
-            <p
-              style={{
-                fontSize: "24px",
-                fontWeight: 700,
-                color: "var(--primary)",
-                margin: "0 0 2px",
-              }}
-            >
-              {profile.bag_count}
-            </p>
-            <p
-              style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0 }}
-            >
-              bags
-            </p>
-          </div>
+        <div className="grid grid-cols-3 gap-3 text-center">
+          {[
+            { value: profile.trip_count, label: "trips" },
+            { value: profile.destination_count, label: "destinations" },
+            { value: profile.bag_count, label: "bags" },
+          ].map(({ value, label }) => (
+            <div key={label}>
+              <p className="text-2xl font-bold text-primary mt-0 mb-0.5">
+                {value}
+              </p>
+              <p className="text-xs text-[color:var(--fg-muted)] m-0">
+                {label}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
       <button
         type="button"
         onClick={handleLogout}
-        style={{
-          background: "transparent",
-          border: "1px solid var(--destructive)",
-          borderRadius: "8px",
-          color: "var(--destructive)",
-          padding: "10px 16px",
-          fontSize: "14px",
-          fontWeight: 500,
-          cursor: "pointer",
-          width: "100%",
-        }}
+        className="w-full bg-transparent border border-destructive rounded-lg text-destructive px-4 py-2.5 text-sm font-medium cursor-pointer hover:bg-[rgba(232,48,74,0.07)] transition-[background] duration-[180ms]"
       >
         Sign out
       </button>

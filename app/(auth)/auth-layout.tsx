@@ -1,52 +1,5 @@
 "use client";
 
-const pageStyle: React.CSSProperties = {
-  minHeight: "100vh",
-  background: "var(--background)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "16px",
-  fontFamily: "var(--font-roboto), system-ui, sans-serif",
-};
-
-const wrapperStyle: React.CSSProperties = {
-  width: "100%",
-  maxWidth: "380px",
-};
-
-const brandStyle: React.CSSProperties = {
-  textAlign: "center",
-  marginBottom: "32px",
-};
-
-const cardStyle: React.CSSProperties = {
-  background: "var(--card)",
-  border: "1px solid var(--border)",
-  borderRadius: "10px",
-  padding: "28px 24px",
-  boxShadow: "var(--shadow-sm)",
-};
-
-export {
-  errorStyle,
-  inputStyle,
-  labelStyle,
-  submitBtnStyle,
-} from "@/lib/styles";
-
-export const fieldStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "0",
-};
-
-export const footerLinkStyle: React.CSSProperties = {
-  color: "var(--primary)",
-  fontWeight: 500,
-  textDecoration: "none",
-};
-
 interface AuthShellProps {
   title: string;
   description: string;
@@ -61,62 +14,28 @@ export function AuthShell({
   children,
 }: AuthShellProps) {
   return (
-    <div style={pageStyle}>
-      <div style={wrapperStyle}>
-        <div style={brandStyle}>
-          <h1
-            style={{
-              fontSize: "28px",
-              fontWeight: 700,
-              color: "var(--foreground)",
-              margin: 0,
-            }}
-          >
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 font-sans">
+      <div className="w-full max-w-[380px]">
+        <div className="text-center mb-8">
+          <h1 className="text-[28px] font-bold text-foreground m-0">
             My Carry-On
           </h1>
-          <p
-            style={{
-              fontSize: "14px",
-              color: "var(--fg-muted)",
-              marginTop: "6px",
-              margin: "6px 0 0",
-            }}
-          >
+          <p className="text-sm text-[color:var(--fg-muted)] mt-1.5 mb-0">
             Pack smarter, travel lighter.
           </p>
         </div>
 
-        <div style={cardStyle}>
-          <h2
-            style={{
-              fontSize: "18px",
-              fontWeight: 600,
-              color: "var(--foreground)",
-              margin: "0 0 4px",
-            }}
-          >
+        <div className="bg-card border border-border rounded-[10px] px-6 py-7 shadow-[var(--shadow-sm-val)]">
+          <h2 className="text-lg font-semibold text-foreground m-0 mb-1">
             {title}
           </h2>
-          <p
-            style={{
-              fontSize: "13px",
-              color: "var(--fg-muted)",
-              margin: "0 0 24px",
-            }}
-          >
+          <p className="text-[13px] text-[color:var(--fg-muted)] mt-0 mb-6">
             {description}
           </p>
 
           {children}
 
-          <p
-            style={{
-              fontSize: "13px",
-              color: "var(--fg-muted)",
-              textAlign: "center",
-              marginTop: "20px",
-            }}
-          >
+          <p className="text-[13px] text-[color:var(--fg-muted)] text-center mt-5 mb-0">
             {footer}
           </p>
         </div>

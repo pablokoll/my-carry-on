@@ -4,7 +4,13 @@
       "mcp__plugin_postman_postman__createCollectionFolder",
       "mcp__plugin_postman_postman__createCollectionRequest",
       "mcp__plugin_postman_postman__getCollections",
-      "mcp__plugin_postman_postman__getCollectionFolder"
+      "mcp__plugin_postman_postman__getCollectionFolder",
+      "Bash(pnpm biome *)",
+      "Bash(python3 *)",
+      "Bash(pnpm tsc *)",
+      "Bash(basedpyright)",
+      "Bash(ruff format *)",
+      "Bash(ruff check *)"
     ]
   }
 }

@@ -7,7 +7,6 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { TypeBadge } from "@/components/ui/type-badge";
 import type { Bag } from "@/lib/queries";
 import { useAllBags, useDeleteBag, useDuplicateBag } from "@/lib/queries";
-import { btnDestructive, btnPrimary } from "@/lib/styles";
 
 export default function BagsPage() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -19,14 +18,7 @@ export default function BagsPage() {
 
   if (isLoading) {
     return (
-      <p
-        style={{
-          color: "var(--fg-muted)",
-          fontSize: "14px",
-          textAlign: "center",
-          paddingTop: "48px",
-        }}
-      >
+      <p className="text-[color:var(--fg-muted)] text-sm text-center pt-12">
         Loading…
       </p>
     );
@@ -34,27 +26,11 @@ export default function BagsPage() {
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "20px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: 600,
-            color: "var(--foreground)",
-            margin: 0,
-          }}
-        >
-          Bags
-        </h2>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-semibold text-foreground m-0">Bags</h2>
         <button
           type="button"
-          style={btnPrimary}
+          className="btn-primary"
           onClick={() => setModalOpen(true)}
         >
           New bag
@@ -62,65 +38,35 @@ export default function BagsPage() {
       </div>
 
       {bags.length === 0 ? (
-        <div style={{ textAlign: "center", paddingTop: "64px" }}>
-          <p
-            style={{
-              color: "var(--fg-muted)",
-              fontSize: "15px",
-              marginBottom: "20px",
-            }}
-          >
+        <div className="text-center pt-16">
+          <p className="text-[color:var(--fg-muted)] text-[15px] mb-5">
             No bags yet.
           </p>
           <button
             type="button"
-            style={btnPrimary}
+            className="btn-primary"
             onClick={() => setModalOpen(true)}
           >
             Prepare your first bag
           </button>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div className="flex flex-col gap-2">
           {bags.map((bag: Bag) => (
-            <div key={bag.id} style={{ position: "relative" }}>
+            <div key={bag.id} className="relative">
               <Link
                 href={`/bags/${bag.id}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  background: "var(--bg-surface)",
-                  borderRadius: "8px",
-                  padding: "12px 16px",
-                  paddingRight: "140px",
-                  textDecoration: "none",
-                }}
+                className="flex items-center bg-[var(--bg-surface)] rounded-lg px-4 py-3 pr-[140px] no-underline"
               >
-                <span
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    color: "var(--foreground)",
-                    marginRight: "10px",
-                  }}
-                >
+                <span className="text-sm font-medium text-foreground mr-2.5">
                   {bag.name}
                 </span>
                 <TypeBadge type={bag.type} />
               </Link>
-              <div
-                style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  display: "flex",
-                  gap: "4px",
-                }}
-              >
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
                 <button
                   type="button"
-                  style={{ ...btnDestructive, color: "var(--fg-muted)" }}
+                  className="btn-ghost text-[color:var(--fg-muted)]"
                   disabled={
                     duplicateBag.isPending && duplicateBag.variables === bag.id
                   }
@@ -132,7 +78,7 @@ export default function BagsPage() {
                 </button>
                 <button
                   type="button"
-                  style={btnDestructive}
+                  className="btn-destructive"
                   onClick={() => setConfirmId(bag.id)}
                 >
                   Delete

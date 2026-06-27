@@ -15,19 +15,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--background)",
-        fontFamily: "var(--font-roboto), system-ui, sans-serif",
-      }}
-    >
+    <div className="min-h-screen bg-background font-sans">
       <Nav />
-      <main
-        style={{ maxWidth: "640px", margin: "0 auto", padding: "24px 16px" }}
-      >
-        {children}
-      </main>
+      <main className="max-w-[640px] mx-auto px-4 py-6">{children}</main>
       <ChatWindow />
     </div>
   );

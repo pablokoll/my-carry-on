@@ -18,9 +18,7 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
-      "a11y": {
-        "noStaticElementInteractions": "off"
-      }
+      "a11y": {}
     }
   },
   "javascript": {

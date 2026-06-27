@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { CreateTripModal } from "@/components/create-trip-modal";
 import { type Trip, useTrips } from "@/lib/queries";
-import { btnPrimary } from "@/lib/styles";
 
 export default function TripsPage() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -12,14 +11,7 @@ export default function TripsPage() {
 
   if (isLoading) {
     return (
-      <p
-        style={{
-          color: "var(--fg-muted)",
-          fontSize: "14px",
-          textAlign: "center",
-          paddingTop: "48px",
-        }}
-      >
+      <p className="text-[color:var(--fg-muted)] text-sm text-center pt-12">
         Loading…
       </p>
     );
@@ -27,27 +19,11 @@ export default function TripsPage() {
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "20px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: 600,
-            color: "var(--foreground)",
-            margin: 0,
-          }}
-        >
-          Trips
-        </h2>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-semibold text-foreground m-0">Trips</h2>
         <button
           type="button"
-          style={btnPrimary}
+          className="btn-primary"
           onClick={() => setModalOpen(true)}
         >
           New trip
@@ -55,94 +31,39 @@ export default function TripsPage() {
       </div>
 
       {trips.length === 0 ? (
-        <div style={{ textAlign: "center", paddingTop: "64px" }}>
-          <p
-            style={{
-              color: "var(--fg-muted)",
-              fontSize: "15px",
-              marginBottom: "20px",
-            }}
-          >
+        <div className="text-center pt-16">
+          <p className="text-[color:var(--fg-muted)] text-[15px] mb-5">
             No trips yet.
           </p>
           <button
             type="button"
-            style={btnPrimary}
+            className="btn-primary"
             onClick={() => setModalOpen(true)}
           >
             Plan your first trip
           </button>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <div className="flex flex-col gap-2.5">
           {trips.map((trip: Trip) => (
             <Link
               key={trip.id}
               href={`/trips/${trip.id}`}
-              style={{ textDecoration: "none" }}
+              className="no-underline"
             >
-              <div
-                style={{
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "10px",
-                  padding: "16px",
-                  cursor: "pointer",
-                  transition:
-                    "box-shadow var(--duration-2) var(--ease), transform var(--duration-2) var(--ease)",
-                  boxShadow: "var(--shadow-xs)",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.boxShadow = "var(--shadow-md)";
-                  el.style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.boxShadow = "var(--shadow-xs)";
-                  el.style.transform = "none";
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "15px",
-                      fontWeight: 600,
-                      color: "var(--foreground)",
-                    }}
-                  >
+              <div className="bg-card border border-border rounded-[10px] p-4 cursor-pointer card-hover shadow-[var(--shadow-xs-val)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[15px] font-semibold text-foreground">
                     {trip.name}
                   </span>
                   {trip.is_active && (
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 500,
-                        padding: "3px 10px",
-                        borderRadius: "99px",
-                        background: "rgba(74,123,181,0.1)",
-                        color: "var(--primary)",
-                      }}
-                    >
+                    <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-[rgba(74,123,181,0.1)] text-primary">
                       Active
                     </span>
                   )}
                 </div>
                 {(trip.start_date || trip.end_date) && (
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      color: "var(--fg-muted)",
-                      marginTop: "4px",
-                      marginBottom: 0,
-                    }}
-                  >
+                  <p className="text-[13px] text-[color:var(--fg-muted)] mt-1 mb-0">
                     {trip.start_date ?? "—"} → {trip.end_date ?? "—"}
                   </p>
                 )}

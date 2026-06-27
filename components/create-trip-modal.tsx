@@ -4,12 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import {
-  errorStyle,
-  inputStyle,
-  labelStyle,
-  submitBtnStyle,
-} from "@/app/(auth)/auth-layout";
 import { Dialog } from "@/components/ui/dialog";
 import { useCreateTrip } from "@/lib/queries";
 
@@ -60,47 +54,25 @@ export function CreateTripModal({ open, onClose, onCreated }: Props) {
 
   return (
     <Dialog open={open} onClose={handleClose}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "20px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "17px",
-            fontWeight: 600,
-            color: "var(--foreground)",
-            margin: 0,
-          }}
-        >
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-[17px] font-semibold text-foreground m-0">
           New trip
         </h2>
         <button
           type="button"
           onClick={handleClose}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--fg-muted)",
-            fontSize: "18px",
-            lineHeight: 1,
-            padding: "4px",
-          }}
+          className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-lg leading-none p-1 hover:text-foreground transition-colors duration-[120ms]"
         >
           ✕
         </button>
       </div>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-      >
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <div>
-          <label htmlFor="trip-name" style={labelStyle}>
+          <label
+            htmlFor="trip-name"
+            className="block text-[13px] font-medium text-foreground mb-1.5"
+          >
             Trip name
           </label>
           <input
@@ -109,86 +81,62 @@ export function CreateTripModal({ open, onClose, onCreated }: Props) {
             placeholder="e.g. Summer in Italy"
             autoFocus
             {...register("name")}
-            style={inputStyle(!!errors.name)}
-            onFocus={(e) => (e.target.style.boxShadow = "var(--shadow-focus)")}
-            onBlur={(e) => (e.target.style.boxShadow = "none")}
+            className={`field-input${errors.name ? " is-error" : ""}`}
           />
-          {errors.name && <p style={errorStyle}>{errors.name.message}</p>}
+          {errors.name && (
+            <p className="text-xs text-destructive mt-1">
+              {errors.name.message}
+            </p>
+          )}
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "12px",
-          }}
-        >
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="start_date" style={labelStyle}>
+            <label
+              htmlFor="start_date"
+              className="block text-[13px] font-medium text-foreground mb-1.5"
+            >
               Start date
             </label>
             <input
               id="start_date"
               type="date"
               {...register("start_date")}
-              style={inputStyle(false)}
-              onFocus={(e) =>
-                (e.target.style.boxShadow = "var(--shadow-focus)")
-              }
-              onBlur={(e) => (e.target.style.boxShadow = "none")}
+              className="field-input"
             />
           </div>
           <div>
-            <label htmlFor="end_date" style={labelStyle}>
+            <label
+              htmlFor="end_date"
+              className="block text-[13px] font-medium text-foreground mb-1.5"
+            >
               End date
             </label>
             <input
               id="end_date"
               type="date"
               {...register("end_date")}
-              style={inputStyle(false)}
-              onFocus={(e) =>
-                (e.target.style.boxShadow = "var(--shadow-focus)")
-              }
-              onBlur={(e) => (e.target.style.boxShadow = "none")}
+              className="field-input"
             />
           </div>
         </div>
 
         {error && (
-          <p
-            style={{
-              fontSize: "13px",
-              color: "var(--destructive)",
-              textAlign: "center",
-            }}
-          >
-            {error}
-          </p>
+          <p className="text-[13px] text-destructive text-center">{error}</p>
         )}
 
-        <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+        <div className="flex gap-2.5 mt-1">
           <button
             type="button"
             onClick={handleClose}
-            style={{
-              flex: 1,
-              height: "42px",
-              background: "transparent",
-              color: "var(--foreground)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
+            className="flex-1 h-[42px] bg-transparent text-foreground border border-border rounded-lg text-sm font-medium cursor-pointer hover:bg-[var(--bg-surface)] transition-[background] duration-[180ms]"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            style={{ ...submitBtnStyle(isSubmitting), flex: 1, marginTop: 0 }}
+            className="btn-submit flex-1 mt-0"
           >
             {isSubmitting ? "Creating…" : "Create trip"}
           </button>

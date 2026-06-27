@@ -416,15 +416,8 @@ function SessionList({
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
-                transition: "box-shadow 150ms",
               }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.boxShadow =
-                  "var(--shadow-sm)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.boxShadow = "none";
-              }}
+              className="transition-shadow duration-[150ms] hover:shadow-[var(--shadow-sm-val)]"
             >
               <button
                 type="button"
@@ -1028,9 +1021,18 @@ function ChatPanel({
           </button>
           {menuOpen && (
             <>
-              {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop dismiss */}
-              <div
-                style={{ position: "fixed", inset: 0, zIndex: 10 }}
+              <button
+                type="button"
+                aria-label="Close menu"
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 10,
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  cursor: "default",
+                }}
                 onClick={() => setMenuOpen(false)}
               />
               <div

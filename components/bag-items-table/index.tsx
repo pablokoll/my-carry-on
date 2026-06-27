@@ -1,6 +1,5 @@
 "use client";
 
-import { btnPrimary } from "@/lib/styles";
 import { ItemTableEdit } from "./item-table-edit";
 import { ItemTableView } from "./item-table-view";
 import type { Category, Item } from "./types";
@@ -29,19 +28,13 @@ export function BagItemsTable({
 
   if (isEmpty) {
     return (
-      <div style={{ padding: "24px 0", textAlign: "center" }}>
-        <p
-          style={{
-            color: "var(--fg-muted)",
-            fontSize: "14px",
-            marginBottom: "12px",
-          }}
-        >
+      <div className="py-6 text-center">
+        <p className="text-[color:var(--fg-muted)] text-sm mb-3">
           No items yet.
         </p>
         <button
           type="button"
-          style={{ ...btnPrimary, height: "34px", fontSize: "13px" }}
+          className="btn-primary h-[34px] text-[13px]"
           onClick={state.enterEdit}
         >
           Add items

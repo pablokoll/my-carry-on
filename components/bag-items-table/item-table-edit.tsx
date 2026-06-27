@@ -1,14 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  btnGhost,
-  btnLink,
-  btnPrimary,
-  btnSecondary,
-  catSelect,
-} from "@/lib/styles";
-import { catColor, cellInner, cellInput, qtyInput, td, th } from "./constants";
+import { catColor, cellInner, td, th } from "./constants";
 import type { Category, RowDraft, SubDraft } from "./types";
 
 interface ItemTableEditProps {
@@ -75,8 +68,8 @@ export function ItemTableEdit({
           <td style={td}>
             <button
               type="button"
+              className="btn-ghost"
               style={{
-                ...btnGhost,
                 color: "var(--destructive)",
                 padding: "0 8px",
                 fontSize: "16px",
@@ -89,22 +82,12 @@ export function ItemTableEdit({
             </button>
           </td>
           <td style={td}>
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => toggleExpand(draft.id)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--fg-muted)",
-                  fontSize: "10px",
-                  padding: "0 4px",
-                  lineHeight: 1,
-                  transition: "transform 120ms",
-                  transform: expandedSubs ? "rotate(90deg)" : "none",
-                  flexShrink: 0,
-                }}
+                className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-[10px] p-1 leading-none shrink-0 transition-transform duration-[120ms]"
+                style={{ transform: expandedSubs ? "rotate(90deg)" : "none" }}
               >
                 ▶
               </button>
@@ -120,17 +103,7 @@ export function ItemTableEdit({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") addRow();
                 }}
-                style={cellInput(nameErrors.has(draft.id))}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "var(--primary)";
-                  e.target.style.boxShadow = "var(--shadow-focus)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = nameErrors.has(draft.id)
-                    ? "var(--destructive)"
-                    : "transparent";
-                  e.target.style.boxShadow = "none";
-                }}
+                className={`cell-input${nameErrors.has(draft.id) ? " is-error" : ""}`}
               />
             </div>
           </td>
@@ -156,15 +129,7 @@ export function ItemTableEdit({
                     quantity: Number(e.target.value) || 1,
                   })
                 }
-                style={qtyInput}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "var(--primary)";
-                  e.target.style.boxShadow = "var(--shadow-focus)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "transparent";
-                  e.target.style.boxShadow = "none";
-                }}
+                className="qty-input"
               />
             )}
           </td>
@@ -178,8 +143,8 @@ export function ItemTableEdit({
                   category_id: e.target.value ? Number(e.target.value) : null,
                 })
               }
+              className="cat-select"
               style={{
-                ...catSelect,
                 background: color ? color.bg : "var(--bg-surface)",
                 borderColor: color ? `${color.dot}40` : "var(--border)",
               }}
@@ -203,8 +168,8 @@ export function ItemTableEdit({
                 <td style={td}>
                   <button
                     type="button"
+                    className="btn-ghost"
                     style={{
-                      ...btnGhost,
                       color: "var(--destructive)",
                       padding: "0 8px",
                       fontSize: "14px",
@@ -228,22 +193,7 @@ export function ItemTableEdit({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") addSubRow(draft.id);
                     }}
-                    style={{
-                      ...cellInput(subNameErrors.has(sub.id)),
-                      fontSize: "12px",
-                      height: "30px",
-                      paddingLeft: "8px",
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "var(--primary)";
-                      e.target.style.boxShadow = "var(--shadow-focus)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = subNameErrors.has(sub.id)
-                        ? "var(--destructive)"
-                        : "transparent";
-                      e.target.style.boxShadow = "none";
-                    }}
+                    className={`cell-input text-xs h-[30px] pl-2${subNameErrors.has(sub.id) ? " is-error" : ""}`}
                   />
                 </td>
                 <td style={{ ...td, textAlign: "center" }}>
@@ -256,15 +206,7 @@ export function ItemTableEdit({
                         quantity: Number(e.target.value) || 1,
                       })
                     }
-                    style={{ ...qtyInput, height: "30px", fontSize: "12px" }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "var(--primary)";
-                      e.target.style.boxShadow = "var(--shadow-focus)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "transparent";
-                      e.target.style.boxShadow = "none";
-                    }}
+                    className="qty-input h-[30px] text-xs"
                   />
                 </td>
                 <td />
@@ -278,7 +220,7 @@ export function ItemTableEdit({
               >
                 <button
                   type="button"
-                  style={{ ...btnLink, fontSize: "12px", paddingLeft: "8px" }}
+                  className="btn-link text-xs pl-2"
                   onClick={() => addSubRow(draft.id)}
                 >
                   + Add sub-item
@@ -293,13 +235,10 @@ export function ItemTableEdit({
 
   return (
     <>
-      <div style={{ overflowX: "auto" }}>
+      <div className="overflow-x-auto">
         <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            tableLayout: "fixed",
-          }}
+          className="w-full border-collapse"
+          style={{ tableLayout: "fixed" }}
         >
           <colgroup>
             <col style={{ width: "36px" }} />
@@ -319,28 +258,17 @@ export function ItemTableEdit({
         </table>
       </div>
 
-      <div
-        style={{
-          marginTop: "8px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-        }}
-      >
-        <button type="button" style={btnLink} onClick={addRow}>
+      <div className="mt-2 flex flex-col gap-2">
+        <button type="button" className="btn-link" onClick={addRow}>
           + Add row
         </button>
         {saveErr && (
-          <p
-            style={{ fontSize: "13px", color: "var(--destructive)", margin: 0 }}
-          >
-            {saveErr}
-          </p>
+          <p className="text-[13px] text-destructive m-0">{saveErr}</p>
         )}
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div className="flex gap-2.5">
           <button
             type="button"
-            style={btnSecondary}
+            className="btn-secondary"
             onClick={cancelEdit}
             disabled={saving}
           >
@@ -348,7 +276,8 @@ export function ItemTableEdit({
           </button>
           <button
             type="button"
-            style={{ ...btnPrimary, opacity: saving ? 0.7 : 1 }}
+            className="btn-primary"
+            style={{ opacity: saving ? 0.7 : 1 }}
             onClick={handleSave}
             disabled={saving}
           >

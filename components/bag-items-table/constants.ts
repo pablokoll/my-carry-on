@@ -42,32 +42,3 @@ export const cellInner: CSSProperties = {
   fontSize: "14px",
   color: "var(--foreground)",
 };
-
-export function cellInput(isError?: boolean): CSSProperties {
-  return {
-    width: "100%",
-    height: "36px",
-    padding: "0 10px",
-    fontSize: "14px",
-    background: "transparent",
-    border: "1px solid transparent",
-    borderRadius: "6px",
-    color: "var(--foreground)",
-    outline: "none",
-    transition: "border-color 120ms, box-shadow 120ms",
-    borderColor: isError ? "var(--destructive)" : "transparent",
-  };
-}
-
-export const qtyInput: CSSProperties = {
-  width: "64px",
-  height: "36px",
-  padding: "0 8px",
-  fontSize: "14px",
-  background: "transparent",
-  border: "1px solid transparent",
-  borderRadius: "6px",
-  color: "var(--foreground)",
-  outline: "none",
-  textAlign: "center",
-};

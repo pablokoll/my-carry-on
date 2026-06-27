@@ -14,52 +14,24 @@ export function ActiveTripCard({ trip }: { trip: Trip }) {
   const bags = (trip.bags ?? []) as BagSummary[];
 
   return (
-    <Link href={`/trips/${trip.id}`} style={{ textDecoration: "none" }}>
-      <div
-        style={{
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-          borderRadius: "14px",
-          padding: "20px",
-          marginBottom: "28px",
-          boxShadow: "var(--shadow-sm)",
-          cursor: "pointer",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            marginBottom: "16px",
-          }}
-        >
+    <Link href={`/trips/${trip.id}`} className="no-underline block">
+      <div className="bg-card border border-border rounded-[14px] p-5 mb-7 shadow-[var(--shadow-sm-val)] cursor-pointer hover:shadow-[var(--shadow-md-val)] transition-shadow duration-[180ms]">
+        <div className="flex items-start justify-between mb-4">
           <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "4px",
-              }}
-            >
+            <div className="flex items-center gap-2 mb-1">
               <span
+                className="text-[11px] font-semibold px-2 py-0.5 rounded-full tracking-[0.04em]"
                 style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  padding: "2px 8px",
-                  borderRadius: "99px",
                   background: allDone
                     ? "rgba(94,164,110,0.15)"
                     : "rgba(74,123,181,0.1)",
                   color: allDone ? "#5ea46e" : "var(--primary)",
-                  letterSpacing: "0.04em",
                 }}
               >
                 {allDone ? "READY" : "ACTIVE"}
               </span>
               {days !== null && (
-                <span style={{ fontSize: "12px", color: "var(--fg-muted)" }}>
+                <span className="text-xs text-[color:var(--fg-muted)]">
                   {days === 0
                     ? "Today!"
                     : days < 0
@@ -68,122 +40,61 @@ export function ActiveTripCard({ trip }: { trip: Trip }) {
                 </span>
               )}
             </div>
-            <h2
-              style={{
-                fontSize: "20px",
-                fontWeight: 700,
-                color: "var(--foreground)",
-                margin: 0,
-              }}
-            >
+            <h2 className="text-xl font-bold text-foreground m-0">
               {trip.name}
             </h2>
             {(trip.start_date || trip.end_date) && (
-              <p
-                style={{
-                  fontSize: "13px",
-                  color: "var(--fg-muted)",
-                  margin: "4px 0 0",
-                }}
-              >
+              <p className="text-[13px] text-[color:var(--fg-muted)] mt-1 mb-0">
                 {formatDate(trip.start_date) ?? "—"} →{" "}
                 {formatDate(trip.end_date) ?? "—"}
               </p>
             )}
           </div>
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div className="text-right shrink-0">
             <div
-              style={{
-                fontSize: "28px",
-                fontWeight: 700,
-                color: allDone ? "#5ea46e" : "var(--primary)",
-                lineHeight: 1,
-              }}
+              className="text-[28px] font-bold leading-none"
+              style={{ color: allDone ? "#5ea46e" : "var(--primary)" }}
             >
               {pct}%
             </div>
-            <div
-              style={{
-                fontSize: "11px",
-                color: "var(--fg-muted)",
-                marginTop: "2px",
-              }}
-            >
+            <div className="text-[11px] text-[color:var(--fg-muted)] mt-0.5">
               packed
             </div>
           </div>
         </div>
 
         {(trip.items_total ?? 0) > 0 && (
-          <div style={{ marginBottom: "16px" }}>
+          <div className="mb-4">
             <ProgressBar
               value={trip.items_packed ?? 0}
               total={trip.items_total ?? 0}
               color={allDone ? "#5ea46e" : "var(--primary)"}
             />
-            <p
-              style={{
-                fontSize: "12px",
-                color: "var(--fg-muted)",
-                margin: "6px 0 0",
-              }}
-            >
+            <p className="text-xs text-[color:var(--fg-muted)] mt-1.5 mb-0">
               {trip.items_packed} / {trip.items_total} items packed
             </p>
           </div>
         )}
 
         {bags.length > 0 ? (
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
-          >
+          <div className="flex flex-col gap-2.5">
             {bags.map((bag) => {
               const bagDone =
                 bag.items_total > 0 && bag.items_packed === bag.items_total;
               return (
                 <div key={bag.id}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          color: "var(--foreground)",
-                        }}
-                      >
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] font-medium text-foreground">
                         {bag.name}
                       </span>
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          color: "var(--fg-muted)",
-                          background: "var(--bg-surface)",
-                          borderRadius: "4px",
-                          padding: "1px 6px",
-                        }}
-                      >
+                      <span className="text-[11px] text-[color:var(--fg-muted)] bg-[var(--bg-surface)] rounded px-1.5 py-px">
                         {bag.type}
                       </span>
                     </div>
                     <span
-                      style={{
-                        fontSize: "12px",
-                        color: bagDone ? "#5ea46e" : "var(--fg-muted)",
-                        fontWeight: bagDone ? 600 : 400,
-                      }}
+                      className={`text-xs ${bagDone ? "font-semibold" : "font-normal"}`}
+                      style={{ color: bagDone ? "#5ea46e" : "var(--fg-muted)" }}
                     >
                       {bag.items_total === 0
                         ? "empty"
@@ -202,7 +113,7 @@ export function ActiveTripCard({ trip }: { trip: Trip }) {
             })}
           </div>
         ) : (
-          <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
+          <p className="text-[13px] text-[color:var(--fg-muted)] m-0">
             No bags assigned yet.
           </p>
         )}

@@ -31,18 +31,11 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
             key={href}
             href={href}
             onClick={onClick}
-            style={{
-              display: "block",
-              padding: "10px 14px",
-              borderRadius: "8px",
-              fontSize: "15px",
-              fontWeight: active ? 600 : 400,
-              color: active ? "var(--primary)" : "var(--fg-secondary)",
-              background: active ? "rgba(74,123,181,0.08)" : "transparent",
-              textDecoration: "none",
-              transition:
-                "background var(--duration-2) var(--ease), color var(--duration-2) var(--ease)",
-            }}
+            className={`block px-3.5 py-2.5 rounded-lg text-[15px] no-underline transition-[background,color] duration-[180ms] ${
+              active
+                ? "nav-link-active"
+                : "font-normal text-[color:var(--fg-secondary)] hover:bg-[var(--bg-surface)]"
+            }`}
           >
             {label}
           </Link>
@@ -51,20 +44,7 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
       <button
         type="button"
         onClick={handleSignOut}
-        style={{
-          display: "block",
-          width: "100%",
-          textAlign: "left",
-          padding: "10px 14px",
-          borderRadius: "8px",
-          fontSize: "15px",
-          fontWeight: 400,
-          color: "var(--destructive)",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          transition: "background var(--duration-2) var(--ease)",
-        }}
+        className="block w-full text-left px-3.5 py-2.5 rounded-lg text-[15px] font-normal text-destructive bg-transparent border-none cursor-pointer transition-[background] duration-[180ms] hover:bg-[rgba(232,48,74,0.07)]"
       >
         Sign out
       </button>
@@ -86,27 +66,9 @@ export function Nav() {
 
   return (
     <>
-      {/* Header */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
-          height: "56px",
-          background: "var(--card)",
-          borderBottom: "1px solid var(--border)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          padding: "0 16px",
-          boxShadow: "var(--shadow-xs)",
-        }}
-      >
+      <header className="sticky top-0 z-40 h-14 bg-card border-b border-border flex items-center justify-end px-4 shadow-[var(--shadow-xs-val)]">
         {/* Desktop nav */}
-        <nav
-          style={{ alignItems: "center", gap: "4px" }}
-          className="desktop-nav"
-        >
+        <nav className="hidden sm:flex items-center gap-1">
           {NAV_LINKS.map(({ href, label }) => (
             <DesktopNavLink key={href} href={href} label={label} />
           ))}
@@ -117,50 +79,21 @@ export function Nav() {
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
-          className="burger-btn"
+          className="flex sm:hidden flex-col gap-[5px] bg-transparent border-none cursor-pointer p-2 text-foreground"
           aria-label="Menu"
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: "8px",
-            color: "var(--foreground)",
-            flexDirection: "column",
-            gap: "5px",
-          }}
         >
           <span
+            className="burger-bar"
             style={{
-              display: "block",
-              width: "22px",
-              height: "2px",
-              background: "currentColor",
-              borderRadius: "2px",
-              transition: `transform var(--duration-2) var(--ease), opacity var(--duration-2) var(--ease)`,
               transform: menuOpen
                 ? "rotate(45deg) translate(5px, 5px)"
                 : "none",
             }}
           />
+          <span className="burger-bar" style={{ opacity: menuOpen ? 0 : 1 }} />
           <span
+            className="burger-bar"
             style={{
-              display: "block",
-              width: "22px",
-              height: "2px",
-              background: "currentColor",
-              borderRadius: "2px",
-              opacity: menuOpen ? 0 : 1,
-              transition: `opacity var(--duration-2) var(--ease)`,
-            }}
-          />
-          <span
-            style={{
-              display: "block",
-              width: "22px",
-              height: "2px",
-              background: "currentColor",
-              borderRadius: "2px",
-              transition: `transform var(--duration-2) var(--ease)`,
               transform: menuOpen
                 ? "rotate(-45deg) translate(5px, -5px)"
                 : "none",
@@ -172,46 +105,17 @@ export function Nav() {
       {/* Mobile drawer */}
       {menuOpen && (
         <>
-          {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop dismiss */}
-          <div
+          <button
+            type="button"
+            aria-label="Close menu"
             onClick={() => setMenuOpen(false)}
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 41,
-              background: "rgba(28,35,51,0.4)",
-              backdropFilter: "blur(2px)",
-            }}
+            className="fixed inset-0 z-[41] bg-[rgba(28,35,51,0.4)] backdrop-blur-sm border-none p-0 cursor-default"
           />
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              right: 0,
-              width: "80%",
-              bottom: 0,
-              zIndex: 42,
-              background: "var(--card)",
-              padding: `68px 12px 16px`,
-              display: "flex",
-              flexDirection: "column",
-              gap: "2px",
-              boxShadow: "var(--shadow-md)",
-            }}
-          >
+          <div className="fixed top-0 right-0 w-4/5 bottom-0 z-[42] bg-card pt-[68px] px-3 pb-4 flex flex-col gap-0.5 shadow-[var(--shadow-md-val)]">
             <NavLinks onClick={() => setMenuOpen(false)} />
           </div>
         </>
       )}
-
-      <style>{`
-        .desktop-nav { display: none !important; }
-        .burger-btn { display: flex !important; }
-        @media (min-width: 640px) {
-          .desktop-nav { display: flex !important; }
-          .burger-btn { display: none !important; }
-        }
-      `}</style>
     </>
   );
 }
@@ -222,17 +126,11 @@ function DesktopNavLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      style={{
-        padding: "6px 12px",
-        borderRadius: "8px",
-        fontSize: "14px",
-        fontWeight: active ? 600 : 400,
-        color: active ? "var(--primary)" : "var(--fg-secondary)",
-        background: active ? "rgba(74,123,181,0.08)" : "transparent",
-        textDecoration: "none",
-        transition:
-          "background var(--duration-2) var(--ease), color var(--duration-2) var(--ease)",
-      }}
+      className={`px-3 py-1.5 rounded-lg text-sm no-underline transition-[background,color] duration-[180ms] ${
+        active
+          ? "nav-link-active"
+          : "font-normal text-[color:var(--fg-secondary)] hover:bg-[var(--bg-surface)]"
+      }`}
     >
       {label}
     </Link>
@@ -248,17 +146,7 @@ function SignOutBtn() {
         clearTokens();
         router.push("/login");
       }}
-      style={{
-        padding: "6px 12px",
-        borderRadius: "8px",
-        fontSize: "14px",
-        fontWeight: 400,
-        color: "var(--destructive)",
-        background: "transparent",
-        border: "none",
-        cursor: "pointer",
-        marginLeft: "4px",
-      }}
+      className="px-3 py-1.5 rounded-lg text-sm font-normal text-destructive bg-transparent border-none cursor-pointer ml-1 hover:bg-[rgba(232,48,74,0.07)] transition-[background] duration-[180ms]"
     >
       Sign out
     </button>

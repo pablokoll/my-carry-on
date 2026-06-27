@@ -2,7 +2,6 @@
 
 import { flexRender, type Table } from "@tanstack/react-table";
 import React from "react";
-import { btnPrimary, btnSecondary, catSelect } from "@/lib/styles";
 import { catColor, cellInner, th } from "./constants";
 import type { Category, Item, SubItem } from "./types";
 
@@ -58,27 +57,12 @@ export function ItemTableView({
             cursor: hasSubs ? "pointer" : "default",
           }}
         >
-          <td
-            style={{
-              padding: "0",
-              textAlign: "center",
-              verticalAlign: "middle",
-            }}
-          >
+          <td className="p-0 text-center align-middle">
             {hasSubs ? (
               <button
                 type="button"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--fg-muted)",
-                  fontSize: "10px",
-                  padding: "0 8px",
-                  lineHeight: 1,
-                  transition: "transform 120ms",
-                  transform: expandedSubs ? "rotate(90deg)" : "none",
-                }}
+                className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-[10px] px-2 leading-none transition-transform duration-[120ms]"
+                style={{ transform: expandedSubs ? "rotate(90deg)" : "none" }}
               >
                 ▶
               </button>
@@ -88,16 +72,11 @@ export function ItemTableView({
                 checked={item.packed}
                 onChange={() => togglePacked(item)}
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: "15px",
-                  height: "15px",
-                  accentColor: "var(--primary)",
-                  cursor: "pointer",
-                }}
+                className="w-[15px] h-[15px] cursor-pointer accent-primary"
               />
             ) : null}
           </td>
-          <td style={{ padding: "0", verticalAlign: "middle" }}>
+          <td className="p-0 align-middle">
             <div
               style={{
                 ...cellInner,
@@ -108,13 +87,7 @@ export function ItemTableView({
               {item.name}
             </div>
           </td>
-          <td
-            style={{
-              padding: "0",
-              textAlign: "center",
-              verticalAlign: "middle",
-            }}
-          >
+          <td className="p-0 text-center align-middle">
             <div
               style={{
                 ...cellInner,
@@ -125,7 +98,7 @@ export function ItemTableView({
               {item.quantity}
             </div>
           </td>
-          <td style={{ padding: "0", verticalAlign: "middle" }}>
+          <td className="p-0 align-middle">
             {color && catName ? (
               <div
                 style={{
@@ -136,17 +109,10 @@ export function ItemTableView({
                 }}
               >
                 <span
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: color.dot,
-                    flexShrink: 0,
-                  }}
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: color.dot }}
                 />
-                <span
-                  style={{ fontSize: "13px", color: "var(--fg-secondary)" }}
-                >
+                <span className="text-[13px] text-[color:var(--fg-secondary)]">
                   {catName}
                 </span>
               </div>
@@ -173,28 +139,17 @@ export function ItemTableView({
                 opacity: showPacked && sub.packed ? 0.5 : 0.85,
               }}
             >
-              <td
-                style={{
-                  padding: "0",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                }}
-              >
+              <td className="p-0 text-center align-middle">
                 {showPacked && (
                   <input
                     type="checkbox"
                     checked={sub.packed}
                     onChange={() => toggleSubPacked(item.id, sub)}
-                    style={{
-                      width: "13px",
-                      height: "13px",
-                      accentColor: "var(--primary)",
-                      cursor: "pointer",
-                    }}
+                    className="w-[13px] h-[13px] cursor-pointer accent-primary"
                   />
                 )}
               </td>
-              <td style={{ padding: "0", verticalAlign: "middle" }}>
+              <td className="p-0 align-middle">
                 <div
                   style={{
                     ...cellInner,
@@ -208,13 +163,7 @@ export function ItemTableView({
                   {sub.name}
                 </div>
               </td>
-              <td
-                style={{
-                  padding: "0",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                }}
-              >
+              <td className="p-0 text-center align-middle">
                 <div
                   style={{
                     ...cellInner,
@@ -237,24 +186,8 @@ export function ItemTableView({
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "6px",
-          marginBottom: "8px",
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            flexWrap: "wrap",
-          }}
-        >
+      <div className="flex items-center justify-between gap-1.5 mb-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <select
             value={filterCatId === "all" ? "all" : String(filterCatId)}
             onChange={(e) =>
@@ -264,14 +197,7 @@ export function ItemTableView({
                   : [{ id: "category", value: Number(e.target.value) }],
               )
             }
-            style={{
-              ...catSelect,
-              width: "auto",
-              minWidth: "100px",
-              height: "26px",
-              fontSize: "11px",
-              padding: "0 6px",
-            }}
+            className="cat-select w-auto min-w-[100px] h-[26px] text-[11px] px-1.5"
           >
             <option value="all">All</option>
             {categories
@@ -284,12 +210,7 @@ export function ItemTableView({
           </select>
           <button
             type="button"
-            style={{
-              ...btnSecondary,
-              fontSize: "11px",
-              height: "26px",
-              padding: "0 8px",
-            }}
+            className="btn-secondary text-[11px] h-[26px] px-2"
             onClick={() =>
               setGrouping((g) => (g.length > 0 ? [] : ["category"]))
             }
@@ -299,25 +220,17 @@ export function ItemTableView({
         </div>
         <button
           type="button"
-          style={{
-            ...btnPrimary,
-            height: "26px",
-            padding: "0 10px",
-            fontSize: "12px",
-          }}
+          className="btn-primary h-[26px] px-2.5 text-xs"
           onClick={enterEdit}
         >
           Edit
         </button>
       </div>
 
-      <div style={{ overflowX: "auto" }}>
+      <div className="overflow-x-auto">
         <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            tableLayout: "fixed",
-          }}
+          className="w-full border-collapse"
+          style={{ tableLayout: "fixed" }}
         >
           <colgroup>
             <col style={{ width: "36px" }} />
@@ -387,15 +300,8 @@ export function ItemTableView({
                       >
                         {color && (
                           <span
-                            style={{
-                              display: "inline-block",
-                              width: "8px",
-                              height: "8px",
-                              borderRadius: "50%",
-                              background: color.dot,
-                              marginRight: "6px",
-                              verticalAlign: "middle",
-                            }}
+                            className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle"
+                            style={{ background: color.dot }}
                           />
                         )}
                         {catName}

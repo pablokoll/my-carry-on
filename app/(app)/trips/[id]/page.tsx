@@ -31,15 +31,6 @@ import {
   useUpdateDestination,
   useUpdateTrip,
 } from "@/lib/queries";
-import {
-  btnPrimary,
-  errorStyle,
-  inputStyle,
-  labelStyle,
-  rowStyle,
-  sectionHeader,
-  submitBtnStyle,
-} from "@/lib/styles";
 import { useBagAssignment } from "./use-bag-assignment";
 import { useDestinationForm } from "./use-destination-form";
 import { useTripEditForm } from "./use-trip-edit";
@@ -91,138 +82,60 @@ export default function TripPage() {
 
   if (isLoading)
     return (
-      <p
-        style={{
-          color: "var(--fg-muted)",
-          fontSize: "14px",
-          textAlign: "center",
-          paddingTop: "48px",
-        }}
-      >
+      <p className="text-[color:var(--fg-muted)] text-sm text-center pt-12">
         Loading…
       </p>
     );
   if (!trip)
     return (
-      <p
-        style={{
-          color: "var(--destructive)",
-          textAlign: "center",
-          paddingTop: "48px",
-        }}
-      >
-        Trip not found.
-      </p>
+      <p className="text-destructive text-center pt-12">Trip not found.</p>
     );
 
   return (
     <>
       {/* Trip header */}
-      <div
-        style={{
-          marginBottom: "24px",
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-        }}
-      >
+      <div className="mb-6 flex items-start justify-between">
         <div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "4px",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "20px",
-                fontWeight: 700,
-                color: "var(--foreground)",
-                margin: 0,
-              }}
-            >
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-xl font-bold text-foreground m-0">
               {trip.name}
             </h2>
             {trip.is_active && (
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 500,
-                  padding: "2px 8px",
-                  borderRadius: "99px",
-                  background: "rgba(74,123,181,0.1)",
-                  color: "var(--primary)",
-                }}
-              >
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[rgba(74,123,181,0.1)] text-primary">
                 Active
               </span>
             )}
           </div>
           {(trip.start_date || trip.end_date) && (
-            <p
-              style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0 }}
-            >
+            <p className="text-xs text-[color:var(--fg-muted)] m-0">
               {trip.start_date ?? "—"} → {trip.end_date ?? "—"}
             </p>
           )}
         </div>
-        <div style={{ position: "relative" }}>
+        <div className="relative">
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            style={{
-              background: "transparent",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              padding: "5px 10px",
-              fontSize: "18px",
-              color: "var(--fg-secondary)",
-              cursor: "pointer",
-              lineHeight: 1,
-            }}
+            className="bg-transparent border border-border rounded-lg px-2.5 py-[5px] text-lg text-[color:var(--fg-secondary)] cursor-pointer leading-none hover:bg-[var(--bg-surface)] transition-[background] duration-[120ms]"
           >
             ⋯
           </button>
           {menuOpen && (
             <>
-              {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop dismiss */}
-              <div
-                style={{ position: "fixed", inset: 0, zIndex: 10 }}
+              <button
+                type="button"
+                aria-label="Close menu"
+                className="fixed inset-0 z-10 border-none bg-transparent p-0 cursor-default"
                 onClick={() => setMenuOpen(false)}
               />
-              <div
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  top: "36px",
-                  zIndex: 20,
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "10px",
-                  boxShadow: "var(--shadow-md)",
-                  minWidth: "140px",
-                  overflow: "hidden",
-                }}
-              >
+              <div className="absolute right-0 top-9 z-20 bg-card border border-border rounded-[10px] shadow-[var(--shadow-md-val)] min-w-[140px] overflow-hidden">
                 <button
                   type="button"
                   onClick={() => {
                     toggleActive.mutate(trip.is_active);
                     setMenuOpen(false);
                   }}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "10px 16px",
-                    fontSize: "13px",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--primary)",
-                  }}
+                  className="block w-full text-left px-4 py-2.5 text-[13px] bg-transparent border-none cursor-pointer text-primary hover:bg-[var(--bg-surface)] transition-[background] duration-[120ms]"
                 >
                   {trip.is_active ? "Deactivate" : "Active"}
                 </button>
@@ -232,16 +145,9 @@ export default function TripPage() {
                     editForm.openEdit();
                     setMenuOpen(false);
                   }}
+                  className="block w-full text-left px-4 py-2.5 text-[13px] bg-transparent border-t border-border cursor-pointer text-foreground hover:bg-[var(--bg-surface)] transition-[background] duration-[120ms]"
                   style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "10px 16px",
-                    fontSize: "13px",
-                    background: "none",
                     border: "none",
-                    cursor: "pointer",
-                    color: "var(--foreground)",
                     borderTop: "1px solid var(--border)",
                   }}
                 >
@@ -253,16 +159,9 @@ export default function TripPage() {
                     setMenuOpen(false);
                     setConfirmTrip(true);
                   }}
+                  className="block w-full text-left px-4 py-2.5 text-[13px] bg-transparent cursor-pointer text-destructive hover:bg-[rgba(232,48,74,0.07)] transition-[background] duration-[120ms]"
                   style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "10px 16px",
-                    fontSize: "13px",
-                    background: "none",
                     border: "none",
-                    cursor: "pointer",
-                    color: "var(--destructive)",
                     borderTop: "1px solid var(--border)",
                   }}
                 >
@@ -276,73 +175,47 @@ export default function TripPage() {
 
       {/* Destinations */}
       <div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "12px",
-          }}
-        >
-          <h3 style={sectionHeader}>Destinations</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-semibold text-foreground m-0">
+            Destinations
+          </h3>
           <button
             type="button"
-            style={{
-              ...btnPrimary,
-              fontSize: "13px",
-              padding: "5px 12px",
-              height: "auto",
-            }}
+            className="btn-primary text-[13px] px-3 py-[5px] h-auto"
             onClick={destForm.openAdd}
           >
             + Add
           </button>
         </div>
         {destLoading ? (
-          <p style={{ color: "var(--fg-muted)", fontSize: "14px" }}>Loading…</p>
+          <p className="text-[color:var(--fg-muted)] text-sm">Loading…</p>
         ) : destinations.length === 0 ? (
-          <p style={{ color: "var(--fg-muted)", fontSize: "14px" }}>
+          <p className="text-[color:var(--fg-muted)] text-sm">
             No destinations yet.
           </p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div className="flex flex-col gap-2">
             {destinations.map((dest: Destination) => (
-              <div key={dest.id} style={rowStyle}>
+              <div
+                key={dest.id}
+                className="bg-[var(--bg-surface)] rounded-lg px-4 py-3 flex items-center justify-between"
+              >
                 <div>
-                  <span
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 500,
-                      color: "var(--foreground)",
-                    }}
-                  >
+                  <span className="text-sm font-medium text-foreground">
                     {dest.city}, {dest.country}
                   </span>
                   {(dest.arrival_date || dest.departure_date) && (
-                    <p
-                      style={{
-                        fontSize: "12px",
-                        color: "var(--fg-muted)",
-                        margin: "2px 0 0",
-                      }}
-                    >
+                    <p className="text-xs text-[color:var(--fg-muted)] mt-0.5 mb-0">
                       {dest.arrival_date ?? "—"} → {dest.departure_date ?? "—"}
                     </p>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
+                <div className="flex gap-0.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => destForm.openEdit(dest)}
                     title="Edit"
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "var(--fg-muted)",
-                      fontSize: "13px",
-                      padding: "4px 8px",
-                    }}
+                    className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-[13px] px-2 py-1 hover:text-foreground transition-colors duration-[120ms]"
                   >
                     ✎
                   </button>
@@ -350,15 +223,7 @@ export default function TripPage() {
                     type="button"
                     onClick={() => setConfirmDestId(dest.id)}
                     title="Remove"
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "var(--fg-muted)",
-                      fontSize: "16px",
-                      lineHeight: 1,
-                      padding: "4px 6px",
-                    }}
+                    className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-base leading-none px-1.5 py-1 hover:text-destructive transition-colors duration-[120ms]"
                   >
                     ×
                   </button>
@@ -370,35 +235,14 @@ export default function TripPage() {
       </div>
 
       {/* Bags */}
-      <div
-        style={{
-          borderTop: "1px solid var(--border)",
-          paddingTop: "24px",
-          marginTop: "24px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "12px",
-          }}
-        >
-          <h3 style={sectionHeader}>Bags</h3>
-          <div style={{ display: "flex", gap: "6px" }}>
+      <div className="border-t border-border pt-6 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-semibold text-foreground m-0">Bags</h3>
+          <div className="flex gap-1.5">
             {unassignedBags.length > 0 && (
               <button
                 type="button"
-                style={{
-                  ...btnPrimary,
-                  background: "transparent",
-                  color: "var(--primary)",
-                  border: "1px solid var(--primary)",
-                  fontSize: "13px",
-                  padding: "5px 12px",
-                  height: "auto",
-                }}
+                className="btn-primary bg-transparent text-primary border border-primary text-[13px] px-3 py-[5px] h-auto hover:bg-[rgba(74,123,181,0.08)]"
                 onClick={bagForm.openModal}
               >
                 Assign
@@ -406,12 +250,7 @@ export default function TripPage() {
             )}
             <button
               type="button"
-              style={{
-                ...btnPrimary,
-                fontSize: "13px",
-                padding: "5px 12px",
-                height: "auto",
-              }}
+              className="btn-primary text-[13px] px-3 py-[5px] h-auto"
               onClick={() => setCreateBagOpen(true)}
             >
               + New bag
@@ -419,14 +258,12 @@ export default function TripPage() {
           </div>
         </div>
         {assignedBags.length === 0 ? (
-          <p style={{ color: "var(--fg-muted)", fontSize: "14px" }}>
+          <p className="text-[color:var(--fg-muted)] text-sm">
             Bags assigned to this trip appear here.
             {allBags.length === 0 && " Create bags first from the Bags page."}
           </p>
         ) : (
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-          >
+          <div className="flex flex-col gap-3">
             {assignedBags.map(
               (bag: { id: number; name: string; type: string }) => {
                 const expanded = expandedBags.has(bag.id);
@@ -434,33 +271,12 @@ export default function TripPage() {
                 return (
                   <div
                     key={bag.id}
-                    style={{
-                      background: "var(--bg-surface)",
-                      borderRadius: "10px",
-                      overflow: "hidden",
-                    }}
+                    className="bg-[var(--bg-surface)] rounded-[10px] overflow-hidden"
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "12px 16px",
-                      }}
-                    >
+                    <div className="flex items-center justify-between px-4 py-3">
                       <button
                         type="button"
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "10px",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: 0,
-                          flex: 1,
-                          textAlign: "left",
-                        }}
+                        className="flex items-center gap-2.5 bg-transparent border-none cursor-pointer p-0 flex-1 text-left"
                         onClick={() =>
                           setExpandedBags((prev) => {
                             const next = new Set(prev);
@@ -472,12 +288,8 @@ export default function TripPage() {
                         }
                       >
                         <span
+                          className="text-[13px] text-[color:var(--fg-muted)] leading-none inline-block transition-transform duration-[120ms]"
                           style={{
-                            fontSize: "13px",
-                            color: "var(--fg-muted)",
-                            lineHeight: 1,
-                            transition: "transform 120ms",
-                            display: "inline-block",
                             transform: expanded
                               ? "rotate(90deg)"
                               : "rotate(0deg)",
@@ -485,13 +297,7 @@ export default function TripPage() {
                         >
                           ▶
                         </span>
-                        <span
-                          style={{
-                            fontSize: "14px",
-                            fontWeight: 600,
-                            color: "var(--foreground)",
-                          }}
-                        >
+                        <span className="text-sm font-semibold text-foreground">
                           {bag.name}
                         </span>
                         <TypeBadge type={bag.type} />
@@ -510,12 +316,7 @@ export default function TripPage() {
                             }
                           }
                           return (
-                            <span
-                              style={{
-                                fontSize: "12px",
-                                color: "var(--fg-muted)",
-                              }}
-                            >
+                            <span className="text-xs text-[color:var(--fg-muted)]">
                               {packed}/{total} packed
                             </span>
                           );
@@ -525,27 +326,13 @@ export default function TripPage() {
                         type="button"
                         onClick={() => setConfirmBagId(bag.id)}
                         title="Remove bag"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "var(--fg-muted)",
-                          fontSize: "16px",
-                          lineHeight: 1,
-                          padding: "4px 6px",
-                          flexShrink: 0,
-                        }}
+                        className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-base leading-none px-1.5 py-1 shrink-0 hover:text-destructive transition-colors duration-[120ms]"
                       >
                         ×
                       </button>
                     </div>
                     {expanded && (
-                      <div
-                        style={{
-                          borderTop: "1px solid var(--border)",
-                          padding: "12px 16px",
-                        }}
-                      >
+                      <div className="border-t border-border px-4 py-3">
                         <BagItemsTable
                           bagId={bag.id}
                           initialItems={items}
@@ -574,46 +361,27 @@ export default function TripPage() {
 
       {/* Edit trip modal */}
       <Dialog open={editForm.open} onClose={() => editForm.setOpen(false)}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "20px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "17px",
-              fontWeight: 600,
-              color: "var(--foreground)",
-              margin: 0,
-            }}
-          >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-[17px] font-semibold text-foreground m-0">
             Edit trip
           </h2>
           <button
             type="button"
             onClick={() => editForm.setOpen(false)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--fg-muted)",
-              fontSize: "18px",
-              lineHeight: 1,
-              padding: "4px",
-            }}
+            className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-lg leading-none p-1 hover:text-foreground transition-colors duration-[120ms]"
           >
             ✕
           </button>
         </div>
         <form
           onSubmit={editForm.form.handleSubmit(editForm.handleSubmit)}
-          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+          className="flex flex-col gap-4"
         >
           <div>
-            <label htmlFor="trip-name" style={labelStyle}>
+            <label
+              htmlFor="trip-name"
+              className="block text-[13px] font-medium text-foreground mb-1.5"
+            >
               Name
             </label>
             <input
@@ -621,93 +389,61 @@ export default function TripPage() {
               type="text"
               autoFocus
               {...editForm.form.register("name")}
-              style={inputStyle(!!editForm.form.formState.errors.name)}
-              onFocus={(e) =>
-                (e.target.style.boxShadow = "var(--shadow-focus)")
-              }
-              onBlur={(e) => (e.target.style.boxShadow = "none")}
+              className={`field-input${editForm.form.formState.errors.name ? " is-error" : ""}`}
             />
             {editForm.form.formState.errors.name && (
-              <p style={errorStyle}>
+              <p className="text-xs text-destructive mt-1">
                 {editForm.form.formState.errors.name.message}
               </p>
             )}
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
-            }}
-          >
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="trip-start_date" style={labelStyle}>
+              <label
+                htmlFor="trip-start_date"
+                className="block text-[13px] font-medium text-foreground mb-1.5"
+              >
                 Start date
               </label>
               <input
                 id="trip-start_date"
                 type="date"
                 {...editForm.form.register("start_date")}
-                style={inputStyle(false)}
-                onFocus={(e) =>
-                  (e.target.style.boxShadow = "var(--shadow-focus)")
-                }
-                onBlur={(e) => (e.target.style.boxShadow = "none")}
+                className="field-input"
               />
             </div>
             <div>
-              <label htmlFor="trip-end_date" style={labelStyle}>
+              <label
+                htmlFor="trip-end_date"
+                className="block text-[13px] font-medium text-foreground mb-1.5"
+              >
                 End date
               </label>
               <input
                 id="trip-end_date"
                 type="date"
                 {...editForm.form.register("end_date")}
-                style={inputStyle(false)}
-                onFocus={(e) =>
-                  (e.target.style.boxShadow = "var(--shadow-focus)")
-                }
-                onBlur={(e) => (e.target.style.boxShadow = "none")}
+                className="field-input"
               />
             </div>
           </div>
           {editForm.error && (
-            <p
-              style={{
-                fontSize: "13px",
-                color: "var(--destructive)",
-                textAlign: "center",
-              }}
-            >
+            <p className="text-[13px] text-destructive text-center">
               {editForm.error}
             </p>
           )}
-          <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+          <div className="flex gap-2.5 mt-1">
             <button
               type="button"
               onClick={() => editForm.setOpen(false)}
-              style={{
-                flex: 1,
-                height: "42px",
-                background: "transparent",
-                color: "var(--foreground)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
+              className="flex-1 h-[42px] bg-transparent text-foreground border border-border rounded-lg text-sm font-medium cursor-pointer hover:bg-[var(--bg-surface)] transition-[background] duration-[180ms]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={editForm.isPending}
-              style={{
-                ...submitBtnStyle(editForm.isPending),
-                flex: 1,
-                marginTop: 0,
-              }}
+              className="btn-submit flex-1 mt-0"
             >
               {editForm.isPending ? "Saving…" : "Save"}
             </button>
@@ -717,46 +453,27 @@ export default function TripPage() {
 
       {/* Add/edit destination modal */}
       <Dialog open={destForm.open} onClose={destForm.close}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "20px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "17px",
-              fontWeight: 600,
-              color: "var(--foreground)",
-              margin: 0,
-            }}
-          >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-[17px] font-semibold text-foreground m-0">
             {destForm.editing ? "Edit destination" : "Add destination"}
           </h2>
           <button
             type="button"
             onClick={destForm.close}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--fg-muted)",
-              fontSize: "18px",
-              lineHeight: 1,
-              padding: "4px",
-            }}
+            className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-lg leading-none p-1 hover:text-foreground transition-colors duration-[120ms]"
           >
             ✕
           </button>
         </div>
         <form
           onSubmit={destForm.form.handleSubmit(destForm.handleSubmit)}
-          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+          className="flex flex-col gap-4"
         >
           <div>
-            <label htmlFor="dest-city" style={labelStyle}>
+            <label
+              htmlFor="dest-city"
+              className="block text-[13px] font-medium text-foreground mb-1.5"
+            >
               City
             </label>
             <input
@@ -765,20 +482,19 @@ export default function TripPage() {
               placeholder="e.g. Paris"
               autoFocus
               {...destForm.form.register("city")}
-              style={inputStyle(!!destForm.form.formState.errors.city)}
-              onFocus={(e) =>
-                (e.target.style.boxShadow = "var(--shadow-focus)")
-              }
-              onBlur={(e) => (e.target.style.boxShadow = "none")}
+              className={`field-input${destForm.form.formState.errors.city ? " is-error" : ""}`}
             />
             {destForm.form.formState.errors.city && (
-              <p style={errorStyle}>
+              <p className="text-xs text-destructive mt-1">
                 {destForm.form.formState.errors.city.message}
               </p>
             )}
           </div>
           <div>
-            <label htmlFor="dest-country" style={labelStyle}>
+            <label
+              htmlFor="dest-country"
+              className="block text-[13px] font-medium text-foreground mb-1.5"
+            >
               Country
             </label>
             <input
@@ -786,93 +502,61 @@ export default function TripPage() {
               type="text"
               placeholder="e.g. France"
               {...destForm.form.register("country")}
-              style={inputStyle(!!destForm.form.formState.errors.country)}
-              onFocus={(e) =>
-                (e.target.style.boxShadow = "var(--shadow-focus)")
-              }
-              onBlur={(e) => (e.target.style.boxShadow = "none")}
+              className={`field-input${destForm.form.formState.errors.country ? " is-error" : ""}`}
             />
             {destForm.form.formState.errors.country && (
-              <p style={errorStyle}>
+              <p className="text-xs text-destructive mt-1">
                 {destForm.form.formState.errors.country.message}
               </p>
             )}
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: "12px",
-            }}
-          >
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="dest-arrival_date" style={labelStyle}>
+              <label
+                htmlFor="dest-arrival_date"
+                className="block text-[13px] font-medium text-foreground mb-1.5"
+              >
                 Arrival
               </label>
               <input
                 id="dest-arrival_date"
                 type="date"
                 {...destForm.form.register("arrival_date")}
-                style={inputStyle(false)}
-                onFocus={(e) =>
-                  (e.target.style.boxShadow = "var(--shadow-focus)")
-                }
-                onBlur={(e) => (e.target.style.boxShadow = "none")}
+                className="field-input"
               />
             </div>
             <div>
-              <label htmlFor="dest-departure_date" style={labelStyle}>
+              <label
+                htmlFor="dest-departure_date"
+                className="block text-[13px] font-medium text-foreground mb-1.5"
+              >
                 Departure
               </label>
               <input
                 id="dest-departure_date"
                 type="date"
                 {...destForm.form.register("departure_date")}
-                style={inputStyle(false)}
-                onFocus={(e) =>
-                  (e.target.style.boxShadow = "var(--shadow-focus)")
-                }
-                onBlur={(e) => (e.target.style.boxShadow = "none")}
+                className="field-input"
               />
             </div>
           </div>
           {destForm.error && (
-            <p
-              style={{
-                fontSize: "13px",
-                color: "var(--destructive)",
-                textAlign: "center",
-              }}
-            >
+            <p className="text-[13px] text-destructive text-center">
               {destForm.error}
             </p>
           )}
-          <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+          <div className="flex gap-2.5 mt-1">
             <button
               type="button"
               onClick={destForm.close}
-              style={{
-                flex: 1,
-                height: "42px",
-                background: "transparent",
-                color: "var(--foreground)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
+              className="flex-1 h-[42px] bg-transparent text-foreground border border-border rounded-lg text-sm font-medium cursor-pointer hover:bg-[var(--bg-surface)] transition-[background] duration-[180ms]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={destForm.isPending}
-              style={{
-                ...submitBtnStyle(destForm.isPending),
-                flex: 1,
-                marginTop: 0,
-              }}
+              className="btn-submit flex-1 mt-0"
             >
               {destForm.isPending
                 ? "Saving…"
@@ -895,50 +579,31 @@ export default function TripPage() {
 
       {/* Assign bag modal */}
       <Dialog open={bagForm.open} onClose={() => bagForm.setOpen(false)}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "20px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "17px",
-              fontWeight: 600,
-              color: "var(--foreground)",
-              margin: 0,
-            }}
-          >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-[17px] font-semibold text-foreground m-0">
             Assign bag
           </h2>
           <button
             type="button"
             onClick={() => bagForm.setOpen(false)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--fg-muted)",
-              fontSize: "18px",
-              lineHeight: 1,
-              padding: "4px",
-            }}
+            className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-lg leading-none p-1 hover:text-foreground transition-colors duration-[120ms]"
           >
             ✕
           </button>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div className="flex flex-col gap-4">
           <div>
-            <label htmlFor="assign-bag" style={labelStyle}>
+            <label
+              htmlFor="assign-bag"
+              className="block text-[13px] font-medium text-foreground mb-1.5"
+            >
               Bag
             </label>
             <select
               id="assign-bag"
               value={bagForm.selectedId}
               onChange={(e) => bagForm.setSelectedId(e.target.value)}
-              style={{ ...inputStyle(false), cursor: "pointer" }}
+              className="field-input cursor-pointer"
             >
               {unassignedBags.map((b: Bag) => (
                 <option key={b.id} value={String(b.id)}>
@@ -948,31 +613,15 @@ export default function TripPage() {
             </select>
           </div>
           {bagForm.err && (
-            <p
-              style={{
-                fontSize: "13px",
-                color: "var(--destructive)",
-                textAlign: "center",
-              }}
-            >
+            <p className="text-[13px] text-destructive text-center">
               {bagForm.err}
             </p>
           )}
-          <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+          <div className="flex gap-2.5 mt-1">
             <button
               type="button"
               onClick={() => bagForm.setOpen(false)}
-              style={{
-                flex: 1,
-                height: "42px",
-                background: "transparent",
-                color: "var(--foreground)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
+              className="flex-1 h-[42px] bg-transparent text-foreground border border-border rounded-lg text-sm font-medium cursor-pointer hover:bg-[var(--bg-surface)] transition-[background] duration-[180ms]"
             >
               Cancel
             </button>
@@ -980,11 +629,7 @@ export default function TripPage() {
               type="button"
               onClick={bagForm.handleAssign}
               disabled={bagForm.isPending}
-              style={{
-                ...submitBtnStyle(bagForm.isPending),
-                flex: 1,
-                marginTop: 0,
-              }}
+              className="btn-submit flex-1 mt-0"
             >
               {bagForm.isPending ? "Assigning…" : "Assign"}
             </button>

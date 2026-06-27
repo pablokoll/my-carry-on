@@ -7,12 +7,6 @@ import { z } from "zod";
 import { Dialog } from "@/components/ui/dialog";
 import { BAG_TYPES } from "@/lib/constants";
 import { type Bag, useCreateBag } from "@/lib/queries";
-import {
-  errorStyle,
-  inputStyle,
-  labelStyle,
-  submitBtnStyle,
-} from "@/lib/styles";
 
 const schema = z.object({
   name: z
@@ -64,47 +58,25 @@ export function CreateBagModal({ open, onClose, onCreated }: Props) {
 
   return (
     <Dialog open={open} onClose={handleClose}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "20px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "17px",
-            fontWeight: 600,
-            color: "var(--foreground)",
-            margin: 0,
-          }}
-        >
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-[17px] font-semibold text-foreground m-0">
           New bag
         </h2>
         <button
           type="button"
           onClick={handleClose}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--fg-muted)",
-            fontSize: "18px",
-            lineHeight: 1,
-            padding: "4px",
-          }}
+          className="bg-transparent border-none cursor-pointer text-[color:var(--fg-muted)] text-lg leading-none p-1 hover:text-foreground transition-colors duration-[120ms]"
         >
           ✕
         </button>
       </div>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-      >
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <div>
-          <label htmlFor="bag-name" style={labelStyle}>
+          <label
+            htmlFor="bag-name"
+            className="block text-[13px] font-medium text-foreground mb-1.5"
+          >
             Name
           </label>
           <input
@@ -113,21 +85,26 @@ export function CreateBagModal({ open, onClose, onCreated }: Props) {
             placeholder="e.g. Main carry-on"
             autoFocus
             {...register("name")}
-            style={inputStyle(!!errors.name)}
-            onFocus={(e) => (e.target.style.boxShadow = "var(--shadow-focus)")}
-            onBlur={(e) => (e.target.style.boxShadow = "none")}
+            className={`field-input${errors.name ? " is-error" : ""}`}
           />
-          {errors.name && <p style={errorStyle}>{errors.name.message}</p>}
+          {errors.name && (
+            <p className="text-xs text-destructive mt-1">
+              {errors.name.message}
+            </p>
+          )}
         </div>
 
         <div>
-          <label htmlFor="bag-type" style={labelStyle}>
+          <label
+            htmlFor="bag-type"
+            className="block text-[13px] font-medium text-foreground mb-1.5"
+          >
             Type
           </label>
           <select
             id="bag-type"
             {...register("type")}
-            style={{ ...inputStyle(false), cursor: "pointer" }}
+            className="field-input cursor-pointer"
           >
             {BAG_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -138,39 +115,21 @@ export function CreateBagModal({ open, onClose, onCreated }: Props) {
         </div>
 
         {error && (
-          <p
-            style={{
-              fontSize: "13px",
-              color: "var(--destructive)",
-              textAlign: "center",
-            }}
-          >
-            {error}
-          </p>
+          <p className="text-[13px] text-destructive text-center">{error}</p>
         )}
 
-        <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+        <div className="flex gap-2.5 mt-1">
           <button
             type="button"
             onClick={handleClose}
-            style={{
-              flex: 1,
-              height: "42px",
-              background: "transparent",
-              color: "var(--foreground)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
+            className="flex-1 h-[42px] bg-transparent text-foreground border border-border rounded-lg text-sm font-medium cursor-pointer hover:bg-[var(--bg-surface)] transition-[background] duration-[180ms]"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            style={{ ...submitBtnStyle(isSubmitting), flex: 1, marginTop: 0 }}
+            className="btn-submit flex-1 mt-0"
           >
             {isSubmitting ? "Creating…" : "Create bag"}
           </button>

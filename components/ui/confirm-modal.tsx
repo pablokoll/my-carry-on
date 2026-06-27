@@ -21,65 +21,26 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <Dialog open={open} onClose={onCancel}>
-      <h2
-        style={{
-          fontSize: "16px",
-          fontWeight: 600,
-          color: "var(--foreground)",
-          margin: "0 0 8px",
-        }}
-      >
+      <h2 className="text-base font-semibold text-foreground mt-0 mb-2">
         {title}
       </h2>
       {description && (
-        <p
-          style={{
-            fontSize: "13px",
-            color: "var(--fg-muted)",
-            margin: "0 0 20px",
-          }}
-        >
+        <p className="text-[13px] text-[color:var(--fg-muted)] mt-0 mb-5">
           {description}
         </p>
       )}
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          marginTop: description ? 0 : "20px",
-        }}
-      >
+      <div className={`flex gap-2.5 ${description ? "" : "mt-5"}`}>
         <button
           type="button"
           onClick={onCancel}
-          style={{
-            flex: 1,
-            height: "40px",
-            background: "transparent",
-            color: "var(--foreground)",
-            border: "1px solid var(--border)",
-            borderRadius: "8px",
-            fontSize: "14px",
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
+          className="flex-1 h-10 bg-transparent text-foreground border border-border rounded-lg text-sm font-medium cursor-pointer hover:bg-[var(--bg-surface)] transition-[background] duration-[180ms]"
         >
           Cancel
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          style={{
-            flex: 1,
-            height: "40px",
-            background: "var(--destructive)",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "14px",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className="flex-1 h-10 bg-destructive text-destructive-foreground border-none rounded-lg text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity duration-[180ms]"
         >
           {confirmLabel}
         </button>

@@ -22,33 +22,17 @@ export function Dialog({ open, onClose, children }: DialogProps) {
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop dismiss — keyboard handled via Escape in useEffect above
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-        background: "rgba(28,35,51,0.4)",
-        backdropFilter: "blur(2px)",
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close dialog"
+        className="absolute inset-0 bg-[rgba(28,35,51,0.4)] backdrop-blur-sm border-none p-0 cursor-default"
+        onClick={onClose}
+      />
       <div
-        style={{
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-          borderRadius: "10px",
-          padding: "24px",
-          width: "100%",
-          maxWidth: "400px",
-          boxShadow: "var(--shadow-md)",
-        }}
+        role="dialog"
+        aria-modal="true"
+        className="relative bg-card border border-border rounded-[10px] p-6 w-full max-w-[400px] shadow-[var(--shadow-md-val)]"
       >
         {children}
       </div>

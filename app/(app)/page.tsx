@@ -5,7 +5,6 @@ import { useState } from "react";
 import { ActiveTripCard } from "@/components/active-trip-card";
 import { CreateTripModal } from "@/components/create-trip-modal";
 import { type Trip, useCreateTrip, useTrips } from "@/lib/queries";
-import { btnPrimary } from "@/lib/styles";
 import { formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -15,14 +14,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <p
-        style={{
-          color: "var(--fg-muted)",
-          fontSize: "14px",
-          textAlign: "center",
-          paddingTop: "48px",
-        }}
-      >
+      <p className="text-[color:var(--fg-muted)] text-sm text-center pt-12">
         Loading…
       </p>
     );
@@ -35,27 +27,13 @@ export default function DashboardPage() {
     <>
       {activeTrip && <ActiveTripCard trip={activeTrip} />}
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "14px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "16px",
-            fontWeight: 600,
-            color: "var(--foreground)",
-            margin: 0,
-          }}
-        >
+      <div className="flex items-center justify-between mb-3.5">
+        <h2 className="text-base font-semibold text-foreground m-0">
           {activeTrip ? "Other trips" : "Your trips"}
         </h2>
         <button
           type="button"
-          style={btnPrimary}
+          className="btn-primary"
           onClick={() => setModalOpen(true)}
         >
           New trip
@@ -63,84 +41,45 @@ export default function DashboardPage() {
       </div>
 
       {trips.length === 0 ? (
-        <div style={{ textAlign: "center", paddingTop: "48px" }}>
-          <p
-            style={{
-              color: "var(--fg-muted)",
-              fontSize: "15px",
-              marginBottom: "20px",
-            }}
-          >
+        <div className="text-center pt-12">
+          <p className="text-[color:var(--fg-muted)] text-[15px] mb-5">
             No trips yet.
           </p>
           <button
             type="button"
-            style={btnPrimary}
+            className="btn-primary"
             onClick={() => setModalOpen(true)}
           >
             Plan your first trip
           </button>
         </div>
       ) : otherTrips.length === 0 && activeTrip ? (
-        <p style={{ fontSize: "13px", color: "var(--fg-muted)" }}>
+        <p className="text-[13px] text-[color:var(--fg-muted)]">
           No other trips.
         </p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div className="flex flex-col gap-2">
           {otherTrips.map((trip: Trip) => (
             <Link
               key={trip.id}
               href={`/trips/${trip.id}`}
-              style={{ textDecoration: "none" }}
+              className="no-underline"
             >
-              <div
-                style={{
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "10px",
-                  padding: "14px 16px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.boxShadow =
-                    "var(--shadow-md)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <span
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "var(--foreground)",
-                      display: "block",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+              <div className="bg-card border border-border rounded-[10px] px-4 py-3.5 cursor-pointer flex items-center justify-between gap-3 hover:shadow-[var(--shadow-md-val)] transition-shadow duration-[180ms]">
+                <div className="min-w-0">
+                  <span className="text-sm font-semibold text-foreground block overflow-hidden text-ellipsis whitespace-nowrap">
                     {trip.name}
                   </span>
                   {(trip.start_date || trip.end_date) && (
-                    <span
-                      style={{ fontSize: "12px", color: "var(--fg-muted)" }}
-                    >
+                    <span className="text-xs text-[color:var(--fg-muted)]">
                       {formatDate(trip.start_date) ?? "—"} →{" "}
                       {formatDate(trip.end_date) ?? "—"}
                     </span>
                   )}
                 </div>
-                <div style={{ flexShrink: 0, textAlign: "right" }}>
+                <div className="shrink-0 text-right">
                   {(trip.items_total ?? 0) > 0 ? (
-                    <span
-                      style={{ fontSize: "12px", color: "var(--fg-muted)" }}
-                    >
+                    <span className="text-xs text-[color:var(--fg-muted)]">
                       {Math.round(
                         ((trip.items_packed ?? 0) / (trip.items_total ?? 1)) *
                           100,
@@ -148,9 +87,7 @@ export default function DashboardPage() {
                       % packed
                     </span>
                   ) : (
-                    <span
-                      style={{ fontSize: "12px", color: "var(--fg-muted)" }}
-                    >
+                    <span className="text-xs text-[color:var(--fg-muted)]">
                       {(trip.bags ?? []).length} bag
                       {(trip.bags ?? []).length !== 1 ? "s" : ""}
                     </span>

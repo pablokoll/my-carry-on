@@ -7,14 +7,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { api, setTokens } from "@/lib/api";
-import {
-  AuthShell,
-  errorStyle,
-  footerLinkStyle,
-  inputStyle,
-  labelStyle,
-  submitBtnStyle,
-} from "../auth-layout";
+import { AuthShell } from "../auth-layout";
 
 const schema = z
   .object({
@@ -69,18 +62,21 @@ export default function RegisterPage() {
       footer={
         <>
           Already have an account?{" "}
-          <Link href="/login" style={footerLinkStyle}>
+          <Link
+            href="/login"
+            className="text-primary font-medium no-underline hover:underline"
+          >
             Sign in
           </Link>
         </>
       }
     >
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-      >
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <div>
-          <label htmlFor="email" style={labelStyle}>
+          <label
+            htmlFor="email"
+            className="block text-[13px] font-medium text-foreground mb-1.5"
+          >
             Email
           </label>
           <input
@@ -89,15 +85,20 @@ export default function RegisterPage() {
             placeholder="you@example.com"
             autoComplete="email"
             {...register("email")}
-            style={inputStyle(!!errors.email)}
-            onFocus={(e) => (e.target.style.boxShadow = "var(--shadow-focus)")}
-            onBlur={(e) => (e.target.style.boxShadow = "none")}
+            className={`field-input${errors.email ? " is-error" : ""}`}
           />
-          {errors.email && <p style={errorStyle}>{errors.email.message}</p>}
+          {errors.email && (
+            <p className="text-xs text-destructive mt-1">
+              {errors.email.message}
+            </p>
+          )}
         </div>
 
         <div>
-          <label htmlFor="password" style={labelStyle}>
+          <label
+            htmlFor="password"
+            className="block text-[13px] font-medium text-foreground mb-1.5"
+          >
             Password
           </label>
           <input
@@ -106,17 +107,20 @@ export default function RegisterPage() {
             placeholder="••••••••"
             autoComplete="new-password"
             {...register("password")}
-            style={inputStyle(!!errors.password)}
-            onFocus={(e) => (e.target.style.boxShadow = "var(--shadow-focus)")}
-            onBlur={(e) => (e.target.style.boxShadow = "none")}
+            className={`field-input${errors.password ? " is-error" : ""}`}
           />
           {errors.password && (
-            <p style={errorStyle}>{errors.password.message}</p>
+            <p className="text-xs text-destructive mt-1">
+              {errors.password.message}
+            </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="confirmPassword" style={labelStyle}>
+          <label
+            htmlFor="confirmPassword"
+            className="block text-[13px] font-medium text-foreground mb-1.5"
+          >
             Confirm password
           </label>
           <input
@@ -125,32 +129,20 @@ export default function RegisterPage() {
             placeholder="••••••••"
             autoComplete="new-password"
             {...register("confirmPassword")}
-            style={inputStyle(!!errors.confirmPassword)}
-            onFocus={(e) => (e.target.style.boxShadow = "var(--shadow-focus)")}
-            onBlur={(e) => (e.target.style.boxShadow = "none")}
+            className={`field-input${errors.confirmPassword ? " is-error" : ""}`}
           />
           {errors.confirmPassword && (
-            <p style={errorStyle}>{errors.confirmPassword.message}</p>
+            <p className="text-xs text-destructive mt-1">
+              {errors.confirmPassword.message}
+            </p>
           )}
         </div>
 
         {error && (
-          <p
-            style={{
-              fontSize: "13px",
-              color: "var(--destructive)",
-              textAlign: "center",
-            }}
-          >
-            {error}
-          </p>
+          <p className="text-[13px] text-destructive text-center">{error}</p>
         )}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={submitBtnStyle(isSubmitting)}
-        >
+        <button type="submit" disabled={isSubmitting} className="btn-submit">
           {isSubmitting ? "Creating account…" : "Create account"}
         </button>
       </form>
