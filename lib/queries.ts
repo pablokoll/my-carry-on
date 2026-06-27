@@ -1,7 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './api'
-import type { Bag } from '@/components/create-bag-modal'
-import type { Category, Item } from '@/components/bag-items-table'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -24,12 +22,40 @@ export interface BagSummary {
   items_packed: number
 }
 
+export interface Bag {
+  id: number
+  name: string
+  type: string
+}
+
 export interface Destination {
   id: number
   city: string
   country: string
   arrival_date: string | null
   departure_date: string | null
+}
+
+export interface Category {
+  id: number
+  name: string
+}
+
+export interface SubItem {
+  id: number
+  item_id: number
+  name: string
+  quantity: number
+  packed: boolean
+}
+
+export interface Item {
+  id: number
+  name: string
+  quantity: number
+  packed: boolean
+  category_id: number | null
+  sub_items: SubItem[]
 }
 
 export interface ChatSession {
@@ -44,6 +70,75 @@ export interface ChatMessage {
   role: 'user' | 'model' | 'summary'
   content: string
   created_at: string
+}
+
+export interface ChatResponse {
+  reply: string
+  suggestions: unknown[]
+  history: ChatMessage[]
+  session_title?: string
+}
+
+export interface TripInput {
+  name: string
+  start_date?: string | null
+  end_date?: string | null
+}
+
+export interface DestinationInput {
+  city: string
+  country: string
+  arrival_date?: string | null
+  departure_date?: string | null
+}
+
+export interface BagInput {
+  name: string
+  type: string
+}
+
+export interface ItemInput {
+  name: string
+  quantity: number
+  category_id?: number | null
+}
+
+export interface SubItemInput {
+  name: string
+  quantity: number
+}
+
+export interface DeleteSessionVars {
+  id: number
+  tripId: number
+}
+
+export interface AddBagItemVars {
+  bagId: number
+  tripId: number
+  data: ItemInput
+}
+
+export interface UpdateItemVars {
+  itemId: number
+  data: Record<string, unknown>
+}
+
+export interface AddSubItemVars {
+  itemId: number
+  data: SubItemInput
+}
+
+export interface CreateBagWithItemsVars {
+  tripId: number
+  name: string
+  bagType: string
+  items: string[]
+}
+
+export interface UpdateDestinationVars {
+  destId: number
+  data: DestinationInput
 }
 
 export type BagWithItems = Bag & { items: Item[] }
@@ -129,8 +224,7 @@ export const useChatMessages = (sessionId: number | null) => useQuery({
 export const useCreateTrip = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; start_date?: string | null; end_date?: string | null }) =>
-      api.post<Trip>('/trips', data),
+    mutationFn: (data: TripInput) => api.post<Trip>('/trips', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.trips() }),
   })
 }
@@ -138,8 +232,7 @@ export const useCreateTrip = () => {
 export const useUpdateTrip = (id: number | string) => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; start_date?: string | null; end_date?: string | null }) =>
-      api.put<Trip>(`/trips/${id}`, data),
+    mutationFn: (data: TripInput) => api.put<Trip>(`/trips/${id}`, data),
     onSuccess: (updated) => {
       qc.setQueryData(keys.trip(id), updated)
       qc.invalidateQueries({ queryKey: keys.trips() })
@@ -172,8 +265,7 @@ export const useToggleTripActive = (id: number | string) => {
 export const useAddDestination = (tripId: number | string) => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { city: string; country: string; arrival_date?: string | null; departure_date?: string | null }) =>
-      api.post<Destination>(`/trips/${tripId}/destinations`, data),
+    mutationFn: (data: DestinationInput) => api.post<Destination>(`/trips/${tripId}/destinations`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.tripDestinations(tripId) }),
   })
 }
@@ -181,7 +273,7 @@ export const useAddDestination = (tripId: number | string) => {
 export const useUpdateDestination = (tripId: number | string) => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ destId, data }: { destId: number; data: { city: string; country: string; arrival_date?: string | null; departure_date?: string | null } }) =>
+    mutationFn: ({ destId, data }: UpdateDestinationVars) =>
       api.put<Destination>(`/destinations/${destId}`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.tripDestinations(tripId) }),
   })
@@ -200,7 +292,7 @@ export const useDeleteDestination = (tripId: number | string) => {
 export const useCreateBag = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; type: string }) => api.post<Bag>('/bags', data),
+    mutationFn: (data: BagInput) => api.post<Bag>('/bags', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.bags() }),
   })
 }
@@ -208,7 +300,7 @@ export const useCreateBag = () => {
 export const useUpdateBag = (id: number | string) => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; type: string }) => api.put<Bag>(`/bags/${id}`, data),
+    mutationFn: (data: BagInput) => api.put<Bag>(`/bags/${id}`, data),
     onSuccess: (updated) => {
       qc.setQueryData(keys.bag(id), (old: BagWithItems | undefined) => old ? { ...old, ...updated } : old)
       qc.invalidateQueries({ queryKey: keys.bags() })
@@ -266,7 +358,7 @@ export const useCreateChatSession = () => {
 export const useDeleteChatSession = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id }: { id: number; tripId: number }) => api.delete(`/chat/sessions/${id}`),
+    mutationFn: ({ id }: DeleteSessionVars) => api.delete(`/chat/sessions/${id}`),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: keys.chatSessions(vars.tripId) })
     },
@@ -283,15 +375,14 @@ export const useClearChatMessages = (sessionId: number) => {
   })
 }
 
+export interface SendMessageInput {
+  session_id: number
+  messages: { role: string; content: string }[]
+}
+
 export const useSendChatMessage = () => {
   return useMutation({
-    mutationFn: (data: { session_id: number; messages: { role: string; content: string }[] }) =>
-      api.post<{
-        reply: string
-        suggestions: unknown[]
-        history: ChatMessage[]
-        session_title?: string
-      }>('/chat', data),
+    mutationFn: (data: SendMessageInput) => api.post<ChatResponse>('/chat', data),
   })
 }
 
@@ -305,8 +396,7 @@ export const useLogChatContext = () => {
 export const useAddBagItem = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ bagId, data }: { bagId: number; tripId: number; data: { name: string; quantity: number; category_id?: number | null } }) =>
-      api.post<{ id: number }>(`/bags/${bagId}/items`, data),
+    mutationFn: ({ bagId, data }: AddBagItemVars) => api.post<Item>(`/bags/${bagId}/items`, data),
     onSuccess: (_result, vars) => {
       qc.invalidateQueries({ queryKey: keys.bagItems(vars.bagId) })
       qc.invalidateQueries({ queryKey: keys.tripBags(vars.tripId) })
@@ -316,23 +406,21 @@ export const useAddBagItem = () => {
 
 export const useUpdateItem = () => {
   return useMutation({
-    mutationFn: ({ itemId, data }: { itemId: number; data: Record<string, unknown> }) =>
-      api.put(`/items/${itemId}`, data),
+    mutationFn: ({ itemId, data }: UpdateItemVars) => api.put<Item>(`/items/${itemId}`, data),
   })
 }
 
 export const useAddSubItem = () => {
   return useMutation({
-    mutationFn: ({ itemId, data }: { itemId: number; data: { name: string; quantity: number } }) =>
-      api.post(`/items/${itemId}/sub-items`, data),
+    mutationFn: ({ itemId, data }: AddSubItemVars) => api.post<SubItem>(`/items/${itemId}/sub-items`, data),
   })
 }
 
 export const useCreateBagWithItems = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ tripId, name, bagType, items }: { tripId: number; name: string; bagType: string; items: string[] }) => {
-      const bag = await api.post<{ id: number }>('/bags', { name, type: bagType })
+    mutationFn: async ({ tripId, name, bagType, items }: CreateBagWithItemsVars) => {
+      const bag = await api.post<Bag>('/bags', { name, type: bagType })
       await api.post(`/trips/${tripId}/bags`, { bag_id: bag.id })
       if (items.length > 0) {
         await Promise.all(items.map((itemName) => api.post(`/bags/${bag.id}/items`, { name: itemName, quantity: 1 })))

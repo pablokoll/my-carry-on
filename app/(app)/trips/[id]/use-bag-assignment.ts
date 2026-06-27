@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Bag } from '@/components/create-bag-modal'
+import type { Bag } from '@/lib/queries'
 
 interface AssignMutation {
   mutateAsync: (bagId: number) => Promise<unknown>

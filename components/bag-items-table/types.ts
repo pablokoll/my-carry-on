@@ -1,24 +1,4 @@
-export interface Category {
-  id: number
-  name: string
-}
-
-export interface SubItem {
-  id: number
-  item_id: number
-  name: string
-  quantity: number
-  packed: boolean
-}
-
-export interface Item {
-  id: number
-  name: string
-  quantity: number
-  packed: boolean
-  category_id: number | null
-  sub_items: SubItem[]
-}
+export type { Category, Item, SubItem } from '@/lib/queries'
 
 export interface RowDraft {
   id: number

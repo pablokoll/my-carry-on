@@ -1,15 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useCreateBag } from "@/lib/queries";
+import { useCreateBag, type Bag } from "@/lib/queries";
 import { FormModal, Field } from "@/components/ui/form-modal";
 import { BAG_TYPES, type BagType } from "@/lib/constants";
-
-export interface Bag {
-  id: number;
-  name: string;
-  type: string;
-}
 
 interface Props {
   open: boolean;
